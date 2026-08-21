@@ -135,3 +135,44 @@ export function pitchClassToFrequency(pitchClass: number, octave: number): numbe
 export function keyLabel(root: number, tonality: Tonality): string {
   return `${KEYS[root]}${tonality === "minor" ? "m" : ""}`;
 }
+
+/** Chord tones of the key itself: root, third, fifth. */
+export function triadOf(tonality: Tonality): number[] {
+  return SCALES[tonality]["Chord tones"];
+}
+
+export type GripMap = Map<string, ShapeName[]>;
+
+/**
+ * Which of the five shapes frets each position. Shapes overlap by design: the notes
+ * two neighbouring shapes share are the seam you slide across, so a position can
+ * belong to more than one and both colours are worth showing.
+ */
+export function gripMembership(positions: Position[]): GripMap {
+  const map: GripMap = new Map();
+  for (const position of positions) {
+    position.shape.frets.forEach((offset, string) => {
+      if (offset === null) return;
+      const fret = position.fret + offset;
+      if (fret > FRET_COUNT) return;
+      const key = `${string}:${fret}`;
+      const owners = map.get(key);
+      if (owners) owners.push(position.name);
+      else map.set(key, [position.name]);
+    });
+  }
+  return map;
+}
+
+/** Every chord tone on the neck, whether or not a shape frets it. */
+export function chordTonesOnNeck(root: number, tonality: Tonality) {
+  const triad = triadOf(tonality);
+  const out: { string: number; fret: number; degree: number }[] = [];
+  for (let string = 0; string < 6; string++) {
+    for (let fret = 0; fret <= FRET_COUNT; fret++) {
+      const degree = degreeAt(string, fret, root);
+      if (triad.includes(degree)) out.push({ string, fret, degree });
+    }
+  }
+  return out;
+}

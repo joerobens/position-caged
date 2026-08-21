@@ -12,6 +12,29 @@ import { scaleForTonality, type AdvanceMode, type Settings } from "@/lib/setting
 
 type Tab = "shape" | "drill" | "sound";
 
+/** What each control is for, in the words you would use holding a guitar. */
+const INFO = {
+  key: "The key everything is built from. Fret numbers are positions on the neck, not sounding pitch, so if you are tuned down a whole step the shapes are identical and only the name changes.",
+  tonality:
+    "Major or minor. The five shapes keep the same geometry in minor: the thirds drop a semitone and the scale choices change with them.",
+  view: "Position zooms to the shape you are on. Whole neck keeps the same notes but shows where the box sits on the full neck.",
+  labels: "What goes inside each dot. Degrees are the interval from the root, which is what transfers between keys. Notes are the note names.",
+  shape:
+    "The five CAGED shapes, ordered up the neck and named for the open chord each one comes from. All shows every shape at once, each in its own colour, so you can see how they interlock and where they share notes.",
+  scale:
+    "The scale drawn around the shape. Turn it off to leave just the chord tones, which is how you check you actually know where the 1, 3 and 5 are rather than running a pattern.",
+  beats: "Beats per bar. Sets how many pips the metronome counts before the accent comes round again.",
+  advance:
+    "How often the metronome moves you to another shape. The change lands on the downbeat, so you have the bar line to make the move.",
+  direction:
+    "Where the next shape comes from. Up and down walk the neck in order, random stops you anticipating, and two shapes turns it into a slide drill between a pair you pick.",
+  pair: "The other half of the slide drill. It shows on the neck as a dashed box, so you can see where you are going before you get there.",
+  click: "The click itself. Turning it off leaves the pips and the shape changes running silently, which is what you want over a backing track.",
+  drone:
+    "A sustained root under whatever you play, optionally with the fifth. It is the quickest way to hear what each degree actually does against the key, rather than taking it on trust.",
+  droneOctave: "Where the drone sits. Low stays under the guitar, high cuts through it. Mid is usually the one that disappears into the background.",
+} as const;
+
 const ADVANCE_MODES: { value: AdvanceMode; label: string; title: string }[] = [
   { value: "up", label: "Up the neck", title: "Step to the next shape toward the body" },
   { value: "down", label: "Down", title: "Step to the next shape toward the nut" },
@@ -137,9 +160,9 @@ export default function Page() {
       update((current) => {
         // Keep a slide drill on two distinct shapes.
         if (current.advanceMode === "pair" && index === current.pairIndex) {
-          return { positionIndex: index, pairIndex: current.positionIndex };
+          return { positionIndex: index, pairIndex: current.positionIndex, allShapes: false };
         }
-        return { positionIndex: index };
+        return { positionIndex: index, allShapes: false };
       }),
     [update],
   );
@@ -151,6 +174,12 @@ export default function Page() {
     label: `${entry.name}${entry.fret === 0 ? " (open)" : ` · ${entry.fret}`}`,
     title: entry.fret === 0 ? `${entry.name} shape at the nut` : `${entry.name} shape, index finger at fret ${entry.fret}`,
   }));
+  // "All" sits alongside the five, because seeing them at once is a way of looking
+  // at the neck rather than a separate mode.
+  const shapeChoices = [
+    { value: "all", label: "All", title: "Every shape at once, colour coded, across the whole neck" },
+    ...shapeOptions.map((option) => ({ ...option, value: String(option.value) })),
+  ];
 
   return (
     <main
@@ -160,19 +189,26 @@ export default function Page() {
       <header className="flex h-11 flex-none items-center justify-between gap-4">
         <h1 className="text-base font-medium tracking-tight">Position</h1>
         <p className="truncate font-mono text-xs text-bone-dim">
-          {keyLabel(settings.root, settings.tonality)} {settings.scale.toLowerCase()} · {position.name} shape
-          {position.fret === 0 ? " at the nut" : ` at fret ${position.fret}`}
+          {keyLabel(settings.root, settings.tonality)}
+          {settings.showScale && !settings.allShapes ? ` ${settings.scale.toLowerCase()}` : ""} ·{" "}
+          {settings.allShapes
+            ? `all five shapes, ${position.name} highlighted`
+            : `${position.name} shape${position.fret === 0 ? " at the nut" : ` at fret ${position.fret}`}`}
         </p>
       </header>
 
       <div className="overflow-hidden rounded-2xl border border-board-edge bg-board px-1 py-1.5 [&_svg]:max-h-[42vh]">
         <Fretboard
           position={position}
-          pair={pairPosition}
+          positions={positions}
+          pair={settings.allShapes ? null : pairPosition}
           root={settings.root}
+          tonality={settings.tonality}
           intervals={intervals}
-          zoom={settings.zoom}
+          zoom={settings.allShapes ? "neck" : settings.zoom}
           labels={settings.labels}
+          allShapes={settings.allShapes}
+          showScale={settings.showScale}
           onPlayNote={playNote}
         />
       </div>
@@ -203,7 +239,7 @@ export default function Page() {
       <div className="grid flex-1 grid-cols-1 gap-3 lg:grid-cols-3">
         {/* Shape and scale */}
         <section className={`panel flex-col gap-4 ${tab === "shape" ? "flex" : "hidden"} lg:flex`}>
-          <Field label="Key">
+          <Field label="Key" info={INFO.key}>
             <ChipGroup
               ariaLabel="Key"
               value={settings.root}
@@ -212,7 +248,7 @@ export default function Page() {
             />
           </Field>
           <div className="flex flex-wrap gap-4">
-            <Field label="Tonality">
+            <Field label="Tonality" info={INFO.tonality}>
               <Segmented
                 ariaLabel="Tonality"
                 value={settings.tonality}
@@ -230,18 +266,20 @@ export default function Page() {
                 ]}
               />
             </Field>
-            <Field label="View">
-              <Segmented
-                ariaLabel="View"
-                value={settings.zoom}
-                onChange={(zoom) => update({ zoom })}
-                options={[
-                  { value: "position", label: "Position" },
-                  { value: "neck", label: "Whole neck" },
-                ]}
-              />
+            <Field label="View" info={INFO.view}>
+              <div className={settings.allShapes ? "pointer-events-none opacity-40" : undefined}>
+                <Segmented
+                  ariaLabel="View"
+                  value={settings.allShapes ? "neck" : settings.zoom}
+                  onChange={(zoom) => update({ zoom })}
+                  options={[
+                    { value: "position", label: "Position" },
+                    { value: "neck", label: "Whole neck" },
+                  ]}
+                />
+              </div>
             </Field>
-            <Field label="Labels">
+            <Field label="Labels" info={INFO.labels}>
               <Segmented
                 ariaLabel="Labels"
                 value={settings.labels}
@@ -253,22 +291,46 @@ export default function Page() {
               />
             </Field>
           </div>
-          <Field label="Shape">
-            <ChipGroup ariaLabel="Shape" value={settings.positionIndex} onChange={selectPosition} options={shapeOptions} />
-          </Field>
-          <Field label="Scale">
+          <Field label="Shape" info={INFO.shape}>
             <ChipGroup
-              ariaLabel="Scale"
-              value={settings.scale}
-              onChange={(scale) => update({ scale })}
-              options={Object.keys(SCALES[settings.tonality]).map((name) => ({ value: name, label: name }))}
+              ariaLabel="Shape"
+              value={settings.allShapes ? "all" : String(settings.positionIndex)}
+              onChange={(value) => (value === "all" ? update({ allShapes: true }) : selectPosition(Number(value)))}
+              options={shapeChoices}
             />
+          </Field>
+          <Field
+            label="Scale"
+            info={INFO.scale}
+            action={
+              <button
+                type="button"
+                className="chip chip-sm"
+                aria-pressed={settings.showScale}
+                onClick={() => update({ showScale: !settings.showScale })}
+              >
+                {settings.showScale ? "Shown" : "Hidden"}
+              </button>
+            }
+          >
+            {settings.showScale ? (
+              <ChipGroup
+                ariaLabel="Scale"
+                value={settings.scale}
+                onChange={(scale) => update({ scale })}
+                options={Object.keys(SCALES[settings.tonality]).map((name) => ({ value: name, label: name }))}
+              />
+            ) : (
+              <p className="text-xs leading-relaxed text-bone-dim">
+                Chord tones only. {settings.allShapes ? "" : "Nothing but the notes the shape is holding down."}
+              </p>
+            )}
           </Field>
         </section>
 
         {/* Drill */}
         <section className={`panel flex-col gap-4 ${tab === "drill" ? "flex" : "hidden"} lg:flex`}>
-          <Field label="Beats per bar">
+          <Field label="Beats per bar" info={INFO.beats}>
             <Segmented
               ariaLabel="Beats per bar"
               value={settings.beats}
@@ -276,7 +338,7 @@ export default function Page() {
               options={[2, 3, 4, 6].map((count) => ({ value: count, label: String(count) }))}
             />
           </Field>
-          <Field label="Move shape every">
+          <Field label="Move shape every" info={INFO.advance}>
             <Segmented
               ariaLabel="Move shape every"
               value={settings.advanceBars}
@@ -290,7 +352,7 @@ export default function Page() {
               ]}
             />
           </Field>
-          <Field label="Direction">
+          <Field label="Direction" info={INFO.direction}>
             <ChipGroup
               ariaLabel="Direction"
               value={settings.advanceMode}
@@ -307,7 +369,7 @@ export default function Page() {
             />
           </Field>
           {settings.advanceMode === "pair" ? (
-            <Field label="Second shape">
+            <Field label="Second shape" info={INFO.pair}>
               <ChipGroup
                 ariaLabel="Second shape"
                 value={settings.pairIndex}
@@ -333,7 +395,7 @@ export default function Page() {
 
         {/* Sound */}
         <section className={`panel flex-col gap-4 ${tab === "sound" ? "flex" : "hidden"} lg:flex`}>
-          <Field label="Metronome">
+          <Field label="Metronome" info={INFO.click}>
             <div className="flex flex-wrap items-center gap-2">
               <Toggle on={settings.click} onChange={(click) => update({ click })}>
                 {settings.click ? "Click on" : "Click off"}
@@ -348,7 +410,7 @@ export default function Page() {
             onChange={(value) => update({ clickVolume: value / 100 })}
             display={`${Math.round(settings.clickVolume * 100)}%`}
           />
-          <Field label="Drone">
+          <Field label="Drone" info={INFO.drone}>
             <div className="flex flex-wrap items-center gap-2">
               <Toggle on={settings.drone} onChange={(drone) => update({ drone })}>
                 {settings.drone ? `${KEYS[settings.root]} drone on` : "Drone off"}
@@ -358,7 +420,7 @@ export default function Page() {
               </Toggle>
             </div>
           </Field>
-          <Field label="Drone octave">
+          <Field label="Drone octave" info={INFO.droneOctave}>
             <Segmented
               ariaLabel="Drone octave"
               value={settings.droneOctave}
@@ -386,13 +448,28 @@ export default function Page() {
       </div>
 
       <p className="text-xs leading-relaxed text-bone-dim">
-        <b className="font-medium text-bone">
-          {keyLabel(settings.root, settings.tonality)} {settings.scale.toLowerCase()}
-        </b>{" "}
-        around the <b className="font-medium text-bone">{position.name} shape</b>
-        {position.fret === 0 ? " at the nut" : `, index finger at fret ${position.fret}`}. Filled dot is the root, thick
-        ring is a chord tone you are already fretting, thin ring is the rest of the scale. Space starts the metronome,
-        arrows change tempo and position.
+        {settings.allShapes ? (
+          <>
+            <b className="font-medium text-bone">
+              {keyLabel(settings.root, settings.tonality)} chord tones across the whole neck
+            </b>
+            . Each dot takes the colour of the shape that frets it, and the bars under the neck show where each shape
+            sits. A dot split between two colours belongs to both shapes at once, which is the seam you slide across.
+            Faint dots are chord tones no shape frets. Space starts the metronome, arrows change tempo and position.
+          </>
+        ) : (
+          <>
+            <b className="font-medium text-bone">
+              {keyLabel(settings.root, settings.tonality)}
+              {settings.showScale ? ` ${settings.scale.toLowerCase()}` : " chord tones"}
+            </b>{" "}
+            around the <b className="font-medium text-bone">{position.name} shape</b>
+            {position.fret === 0 ? " at the nut" : `, index finger at fret ${position.fret}`}. Filled dot is the root,
+            thick ring is a chord tone you are already fretting
+            {settings.showScale ? ", thin ring is the rest of the scale" : ""}. Space starts the metronome, arrows
+            change tempo and position.
+          </>
+        )}
       </p>
     </main>
   );

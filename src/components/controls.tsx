@@ -1,11 +1,83 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Info as InfoIcon } from "@phosphor-icons/react";
 
-export function Field({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
+/**
+ * The explainer next to a control. Opens on hover for a mouse and on tap for the
+ * iPad, which has no hover at all, so it cannot be hover-only.
+ */
+export function Info({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  const id = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: PointerEvent) => {
+      if (!wrap.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <span
+      ref={wrap}
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-label="What this does"
+        aria-expanded={open}
+        aria-describedby={open ? id : undefined}
+        onClick={() => setOpen((current) => !current)}
+        className="flex size-5 items-center justify-center rounded-full text-bone-dim transition-colors hover:text-bone focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone"
+      >
+        <InfoIcon size={15} weight="bold" />
+      </button>
+      {open ? (
+        <span
+          id={id}
+          role="tooltip"
+          className="absolute left-1/2 top-7 z-30 w-[min(280px,calc(100vw-40px))] -translate-x-1/2 rounded-xl border border-line bg-panel p-3 text-xs leading-relaxed font-normal normal-case tracking-normal text-bone shadow-lg shadow-black/40"
+        >
+          {text}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+export function Field({
+  label,
+  info,
+  action,
+  children,
+  className = "",
+}: {
+  label: string;
+  info?: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
-      <span className="label">{label}</span>
+      <span className="label flex items-center gap-1.5">
+        {label}
+        {info ? <Info text={info} /> : null}
+        {action ? <span className="ml-auto">{action}</span> : null}
+      </span>
       {children}
     </div>
   );

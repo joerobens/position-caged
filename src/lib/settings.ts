@@ -24,6 +24,10 @@ export type Settings = {
   droneOctave: number;
   droneVolume: number;
   droneFifth: boolean;
+  /** Show all five shapes across the whole neck, each in its own colour. */
+  allShapes: boolean;
+  /** The scale layer. Off leaves just the chord tones. */
+  showScale: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -44,6 +48,8 @@ export const DEFAULT_SETTINGS: Settings = {
   droneOctave: 0,
   droneVolume: 0.5,
   droneFifth: true,
+  allShapes: false,
+  showScale: true,
 };
 
 export const STORAGE_KEY = "fretwork:v1";

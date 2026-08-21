@@ -74,6 +74,11 @@ body {
     font-weight: 500;
   }
 
+  /* Compact variant, for a toggle that sits inside a field label. */
+  .chip-sm {
+    @apply min-h-0 rounded-lg px-2.5 py-1 text-xs;
+  }
+
   .segmented {
     @apply flex gap-1 rounded-xl border border-line bg-panel p-1;
   }
