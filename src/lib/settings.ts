@@ -1,6 +1,9 @@
 import { EQUIVALENT_SCALE, SCALES, type Tonality } from "./music";
+import { SPIDER_PATTERNS, type Drill, type SpiderPattern } from "./drills";
 
-export type AdvanceMode = "up" | "down" | "random" | "pair";
+/** Where the next shape comes from in the CAGED drill. */
+export type AdvanceMode = "up" | "down" | "random";
+export type Mode = "learn" | "practice";
 export type Zoom = "position" | "neck";
 export type Labels = "degrees" | "notes";
 
@@ -28,6 +31,15 @@ export type Settings = {
   allShapes: boolean;
   /** The scale layer. Off leaves just the chord tones. */
   showScale: boolean;
+  /** Reading the neck, or playing to the clock. */
+  mode: Mode;
+  drill: Drill;
+  spiderStartFret: number;
+  spiderPattern: SpiderPattern;
+  /** Come back down as well as going up. */
+  spiderBoth: boolean;
+  /** Move up a fret at the end of each cycle. */
+  spiderShift: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -50,6 +62,12 @@ export const DEFAULT_SETTINGS: Settings = {
   droneFifth: true,
   allShapes: false,
   showScale: true,
+  mode: "learn",
+  drill: "caged",
+  spiderStartFret: 5,
+  spiderPattern: "1-2-3-4",
+  spiderBoth: true,
+  spiderShift: false,
 };
 
 export const STORAGE_KEY = "fretwork:v1";
@@ -67,8 +85,15 @@ export function loadSettings(): Settings {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    const parsed = { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<Settings>) };
+    const stored = JSON.parse(raw) as Omit<Partial<Settings>, "advanceMode"> & { advanceMode?: string };
+    // The slide drill used to be a fourth advance direction. It is a drill now.
+    if (stored.advanceMode === "pair") {
+      stored.advanceMode = "up";
+      stored.drill = "slide";
+    }
+    const parsed = { ...DEFAULT_SETTINGS, ...(stored as Partial<Settings>) };
     parsed.scale = scaleForTonality(parsed.scale, parsed.tonality);
+    if (!SPIDER_PATTERNS.includes(parsed.spiderPattern)) parsed.spiderPattern = DEFAULT_SETTINGS.spiderPattern;
     return parsed;
   } catch {
     return DEFAULT_SETTINGS;

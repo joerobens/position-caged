@@ -1,17 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import Fretboard from "@/components/Fretboard";
+import KeyBar from "@/components/KeyBar";
 import Transport, { MAX_BPM, MIN_BPM } from "@/components/Transport";
 import { ChipGroup, Field, Segmented, Slider, Toggle } from "@/components/controls";
 import { useMetronome } from "@/hooks/useMetronome";
 import { useSettings } from "@/hooks/useSettings";
 import { getAudioEngine } from "@/lib/audio";
-import { KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
-import { scaleForTonality, type AdvanceMode, type Settings } from "@/lib/settings";
+import { DRILLS, SPIDER_PATTERNS, spiderSequence, spiderStepAt, type Drill } from "@/lib/drills";
+import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
+import { scaleForTonality, type AdvanceMode, type Mode, type Settings } from "@/lib/settings";
 import { deriveView } from "@/lib/view";
 
-type Tab = "shape" | "drill" | "sound";
+const ADVANCE_MODES: { value: AdvanceMode; label: string; title: string }[] = [
+  { value: "up", label: "Up the neck", title: "Step to the next shape toward the body" },
+  { value: "down", label: "Down", title: "Step to the next shape toward the nut" },
+  { value: "random", label: "Random", title: "Jump to any other shape" },
+];
 
 /** What each control is for, in the words you would use holding a guitar. */
 const INFO = {
@@ -24,27 +30,25 @@ const INFO = {
     "The five CAGED shapes, ordered up the neck and named for the open chord each one comes from. All shows every shape at once, each in its own colour, so you can see how they interlock and where they share notes.",
   scale:
     "The scale drawn around the shape. Turn it off to leave just the chord tones, which is how you check you actually know where the 1, 3 and 5 are rather than running a pattern.",
+  drill: "What the clock is drilling. The shape drills move you around the neck; the spider walk is a finger exercise and takes the neck over while it runs.",
   beats: "Beats per bar. Sets how many pips the metronome counts before the accent comes round again.",
   advance:
     "How often the metronome moves you to another shape. The change lands on the downbeat, so you have the bar line to make the move.",
-  direction:
-    "Where the next shape comes from. Up and down walk the neck in order, random stops you anticipating, and two shapes turns it into a slide drill between a pair you pick.",
+  direction: "Where the next shape comes from. Up and down walk the neck in order; random stops you anticipating it.",
   pair: "The other half of the slide drill. It shows on the neck as a dashed box, so you can see where you are going before you get there.",
   click: "The click itself. Turning it off leaves the pips and the shape changes running silently, which is what you want over a backing track.",
-  drone:
-    "A sustained root under whatever you play, optionally with the fifth. It is the quickest way to hear what each degree actually does against the key, rather than taking it on trust.",
-  droneOctave: "Where the drone sits. Low stays under the guitar, high cuts through it. Mid is usually the one that disappears into the background.",
+  spiderStart: "The fret the index finger starts on. The exercise covers four frets from there, one per finger.",
+  spiderPattern:
+    "The order the fingers go in. 1-2-3-4 is the plain walk; the others break up the order, which is harder and better for independence.",
+  spiderShape:
+    "Both directions plays up the strings and back down. Shift up moves the whole box a fret at the end of each pass and keeps climbing.",
 } as const;
 
-const ADVANCE_MODES: { value: AdvanceMode; label: string; title: string }[] = [
-  { value: "up", label: "Up the neck", title: "Step to the next shape toward the body" },
-  { value: "down", label: "Down", title: "Step to the next shape toward the nut" },
-  { value: "random", label: "Random", title: "Jump to any other shape" },
-  { value: "pair", label: "Two shapes", title: "Slide back and forth between two positions" },
-];
-
-/** Where the next shape change lands, given the drill mode. */
+/** Where the next shape change lands. */
 function advancePatch(settings: Settings, count: number): Partial<Settings> {
+  if (settings.drill === "slide") {
+    return { positionIndex: settings.pairIndex, pairIndex: settings.positionIndex };
+  }
   switch (settings.advanceMode) {
     case "down":
       return { positionIndex: (settings.positionIndex - 1 + count) % count };
@@ -54,22 +58,46 @@ function advancePatch(settings: Settings, count: number): Partial<Settings> {
       while (next === settings.positionIndex) next = Math.floor(Math.random() * count);
       return { positionIndex: next };
     }
-    case "pair":
-      return { positionIndex: settings.pairIndex, pairIndex: settings.positionIndex };
     default:
       return { positionIndex: (settings.positionIndex + 1) % count };
   }
 }
 
+function isMode(value: string | null): value is Mode {
+  return value === "learn" || value === "practice";
+}
+
 export default function Page() {
   const { settings, update, hydrated } = useSettings();
-  const [tab, setTab] = useState<Tab>("shape");
 
   const positions = useMemo(() => buildPositions(settings.root, settings.tonality), [settings.root, settings.tonality]);
   const position = positions[Math.min(settings.positionIndex, positions.length - 1)];
-  const pairPosition = settings.advanceMode === "pair" ? positions[Math.min(settings.pairIndex, positions.length - 1)] : null;
+  const pairPosition = positions[Math.min(settings.pairIndex, positions.length - 1)];
   const intervals = SCALES[settings.tonality][settings.scale] ?? Object.values(SCALES[settings.tonality])[0];
   const view = deriveView(settings);
+
+  // The mode lives in the URL as well as in storage, so the iPad can hold a home
+  // screen icon for each one and the back button does what it looks like it does.
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("mode");
+    if (isMode(fromUrl)) update({ mode: fromUrl });
+    const onPop = () => {
+      const mode = new URLSearchParams(window.location.search).get("mode");
+      if (isMode(mode)) update({ mode });
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [update]);
+
+  const setMode = useCallback(
+    (mode: Mode) => {
+      update({ mode });
+      const url = new URL(window.location.href);
+      url.searchParams.set("mode", mode);
+      window.history.pushState({}, "", url);
+    },
+    [update],
+  );
 
   // The accent follows the shape, so the whole interface tells you where you are.
   useEffect(() => {
@@ -85,9 +113,21 @@ export default function Page() {
     beats: settings.beats,
     click: settings.click,
     volume: settings.clickVolume,
-    advanceBars: settings.advanceBars,
+    advanceBars: view.advanceBars,
     onAdvance: advance,
   });
+
+  const spiderSteps = useMemo(
+    () =>
+      spiderSequence({
+        startFret: settings.spiderStartFret,
+        pattern: settings.spiderPattern,
+        both: settings.spiderBoth,
+        shift: settings.spiderShift,
+      }),
+    [settings.spiderStartFret, settings.spiderPattern, settings.spiderBoth, settings.spiderShift],
+  );
+  const spider = view.spiderDrawn ? { steps: spiderSteps, index: spiderStepAt(spiderSteps, metronome.pulse) } : null;
 
   // Drone. Retunes rather than restarting, so changing key mid-practice does not click.
   useEffect(() => {
@@ -115,6 +155,7 @@ export default function Page() {
     (direction: 1 | -1) =>
       update((current) => ({
         positionIndex: (current.positionIndex + direction + positions.length) % positions.length,
+        allShapes: false,
       })),
     [update, positions.length],
   );
@@ -125,6 +166,8 @@ export default function Page() {
       if (target && (target.tagName === "INPUT" || target.isContentEditable)) return;
       switch (event.code) {
         case "Space":
+          // The transport only exists in Practice, so space belongs to Practice.
+          if (settings.mode !== "practice") return;
           event.preventDefault();
           metronome.toggle();
           break;
@@ -142,26 +185,25 @@ export default function Page() {
         case "ArrowLeft":
           step(-1);
           break;
-        case "KeyZ":
-          update({ zoom: settings.zoom === "position" ? "neck" : "position" });
+        case "KeyL":
+          setMode("learn");
+          break;
+        case "KeyP":
+          setMode("practice");
           break;
         case "KeyD":
           update({ drone: !settings.drone });
-          break;
-        case "KeyM":
-          update({ click: !settings.click });
           break;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [metronome, setBpm, step, update, settings.bpm, settings.zoom, settings.drone, settings.click]);
+  }, [metronome, setBpm, step, setMode, update, settings.bpm, settings.mode, settings.drone]);
 
   const selectPosition = useCallback(
     (index: number) =>
       update((current) => {
-        // Keep a slide drill on two distinct shapes.
-        if (current.advanceMode === "pair" && index === current.pairIndex) {
+        if (current.drill === "slide" && index === current.pairIndex) {
           return { positionIndex: index, pairIndex: current.positionIndex, allShapes: false };
         }
         return { positionIndex: index, allShapes: false };
@@ -176,12 +218,13 @@ export default function Page() {
     label: `${entry.name}${entry.fret === 0 ? " (open)" : ` · ${entry.fret}`}`,
     title: entry.fret === 0 ? `${entry.name} shape at the nut` : `${entry.name} shape, index finger at fret ${entry.fret}`,
   }));
-  // "All" sits alongside the five, because seeing them at once is a way of looking
-  // at the neck rather than a separate mode.
   const shapeChoices = [
     { value: "all", label: "All", title: "Every shape at once, colour coded, across the whole neck" },
     ...shapeOptions.map((option) => ({ ...option, value: String(option.value) })),
   ];
+
+  const drill = DRILLS.find((entry) => entry.id === settings.drill) ?? DRILLS[0];
+  const learning = settings.mode === "learn";
 
   return (
     <main
@@ -191,14 +234,17 @@ export default function Page() {
       <header className="flex h-11 flex-none items-center justify-between gap-4">
         <h1 className="text-base font-medium tracking-tight">Position</h1>
         <p className="truncate font-mono text-xs text-bone-dim">
-          {keyLabel(settings.root, settings.tonality)}
-          {view.scaleDrawn ? ` ${settings.scale.toLowerCase()}` : ""} ·{" "}
-          {view.allShapes
-            ? `all five shapes, ${position.name} highlighted`
-            : `${position.name} shape${position.fret === 0 ? " at the nut" : ` at fret ${position.fret}`}`}
+          {view.spiderDrawn
+            ? `spider walk · ${settings.spiderPattern}`
+            : `${keyLabel(settings.root, settings.tonality)}${view.scaleDrawn ? ` ${settings.scale.toLowerCase()}` : ""} · ${
+                view.allShapes
+                  ? `all five shapes, ${position.name} highlighted`
+                  : `${position.name} shape${position.fret === 0 ? " at the nut" : ` at fret ${position.fret}`}`
+              }`}
         </p>
       </header>
 
+      {/* the neck, in both modes, always */}
       <div className="overflow-hidden rounded-2xl border border-board-edge bg-board px-1 py-1.5 [&_svg]:max-h-[42vh]">
         <Fretboard
           position={position}
@@ -211,260 +257,292 @@ export default function Page() {
           labels={settings.labels}
           allShapes={view.allShapes}
           showScale={view.scaleDrawn}
+          spider={spider}
           onPlayNote={playNote}
         />
       </div>
 
-      <Transport
-        playing={metronome.playing}
-        onToggle={metronome.toggle}
-        bpm={settings.bpm}
-        onBpm={setBpm}
-        beats={settings.beats}
-        beat={metronome.beat}
-        bar={metronome.bar}
+      <KeyBar
+        root={settings.root}
+        tonality={settings.tonality}
+        drone={settings.drone}
+        droneFifth={settings.droneFifth}
+        droneOctave={settings.droneOctave}
+        droneVolume={settings.droneVolume}
+        onChange={update}
       />
 
-      <nav className="lg:hidden">
-        <Segmented
-          ariaLabel="Control group"
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: "shape", label: "Shape & scale" },
-            { value: "drill", label: "Drill" },
-            { value: "sound", label: "Sound" },
-          ]}
-        />
+      <nav aria-label="Mode">
+        <div className="segmented w-full sm:w-fit" role="group">
+          <button
+            type="button"
+            aria-pressed={learning}
+            onClick={() => setMode("learn")}
+            className="flex-1 sm:flex-none"
+          >
+            Learn
+          </button>
+          <button
+            type="button"
+            aria-pressed={!learning}
+            onClick={() => setMode("practice")}
+            className="flex-1 sm:flex-none"
+          >
+            Practice
+          </button>
+        </div>
       </nav>
 
-      <div className="grid flex-1 grid-cols-1 gap-3 lg:grid-cols-3">
-        {/* Shape and scale */}
-        <section className={`panel flex-col gap-4 ${tab === "shape" ? "flex" : "hidden"} lg:flex`}>
-          <Field label="Key" info={INFO.key}>
-            <ChipGroup
-              ariaLabel="Key"
-              value={settings.root}
-              onChange={(root) => update({ root, positionIndex: 0, pairIndex: 2 })}
-              options={KEYS.map((name, index) => ({ value: index, label: name }))}
-            />
-          </Field>
-          <div className="flex flex-wrap gap-4">
-            <Field label="Tonality" info={INFO.tonality}>
-              <Segmented
-                ariaLabel="Tonality"
-                value={settings.tonality}
-                onChange={(tonality) =>
-                  update((current) => ({
-                    tonality,
-                    scale: scaleForTonality(current.scale, tonality),
-                    positionIndex: 0,
-                    pairIndex: 2,
-                  }))
-                }
-                options={[
-                  { value: "major", label: "Major" },
-                  { value: "minor", label: "Minor" },
-                ]}
+      {learning ? (
+        /* Learn: you drive it and read the answer off the neck. No clock. */
+        <section aria-label="Learn" className="grid flex-1 grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="panel flex flex-col gap-4">
+            <Field label="Key" info={INFO.key}>
+              <ChipGroup
+                ariaLabel="Key"
+                value={settings.root}
+                onChange={(root) => update({ root, positionIndex: 0, pairIndex: 2 })}
+                options={KEYS.map((name, index) => ({ value: index, label: name }))}
               />
             </Field>
-            {view.zoomAvailable ? (
-              <Field label="View" info={INFO.view}>
+            <div className="flex flex-wrap gap-4">
+              <Field label="Tonality" info={INFO.tonality}>
                 <Segmented
-                  ariaLabel="View"
-                  value={settings.zoom}
-                  onChange={(zoom) => update({ zoom })}
+                  ariaLabel="Tonality"
+                  value={settings.tonality}
+                  onChange={(tonality) =>
+                    update((current) => ({
+                      tonality,
+                      scale: scaleForTonality(current.scale, tonality),
+                      positionIndex: 0,
+                      pairIndex: 2,
+                    }))
+                  }
                   options={[
-                    { value: "position", label: "Position" },
-                    { value: "neck", label: "Whole neck" },
+                    { value: "major", label: "Major" },
+                    { value: "minor", label: "Minor" },
                   ]}
                 />
               </Field>
-            ) : null}
-            <Field label="Labels" info={INFO.labels}>
-              <Segmented
-                ariaLabel="Labels"
-                value={settings.labels}
-                onChange={(labels) => update({ labels })}
-                options={[
-                  { value: "degrees", label: "Degrees" },
-                  { value: "notes", label: "Notes" },
-                ]}
-              />
-            </Field>
-          </div>
-          <Field label="Shape" info={INFO.shape}>
-            <ChipGroup
-              ariaLabel="Shape"
-              value={settings.allShapes ? "all" : String(settings.positionIndex)}
-              onChange={(value) => (value === "all" ? update({ allShapes: true }) : selectPosition(Number(value)))}
-              options={shapeChoices}
-            />
-          </Field>
-          {view.scaleAvailable ? (
-            <Field
-              label="Scale"
-              info={INFO.scale}
-              action={
-                <button
-                  type="button"
-                  className="chip chip-sm"
-                  aria-pressed={settings.showScale}
-                  onClick={() => update({ showScale: !settings.showScale })}
-                >
-                  {settings.showScale ? "Shown" : "Hidden"}
-                </button>
-              }
-            >
-              {settings.showScale ? (
-                <ChipGroup
-                  ariaLabel="Scale"
-                  value={settings.scale}
-                  onChange={(scale) => update({ scale })}
-                  options={Object.keys(SCALES[settings.tonality]).map((name) => ({ value: name, label: name }))}
+              {view.zoomAvailable ? (
+                <Field label="View" info={INFO.view}>
+                  <Segmented
+                    ariaLabel="View"
+                    value={settings.zoom}
+                    onChange={(zoom) => update({ zoom })}
+                    options={[
+                      { value: "position", label: "Position" },
+                      { value: "neck", label: "Whole neck" },
+                    ]}
+                  />
+                </Field>
+              ) : null}
+              <Field label="Labels" info={INFO.labels}>
+                <Segmented
+                  ariaLabel="Labels"
+                  value={settings.labels}
+                  onChange={(labels) => update({ labels })}
+                  options={[
+                    { value: "degrees", label: "Degrees" },
+                    { value: "notes", label: "Notes" },
+                  ]}
                 />
-              ) : (
-                <p className="text-[13px] leading-relaxed text-bone-dim">
-                  Chord tones only: the notes the shape is holding down, and nothing else.
-                </p>
-              )}
-            </Field>
-          ) : null}
-          {view.note ? (
-            <p className="rounded-xl border border-line bg-ink/40 p-3 text-[13px] leading-relaxed text-bone-dim">
-              {view.note}
-            </p>
-          ) : null}
-        </section>
+              </Field>
+            </div>
+          </div>
 
-        {/* Drill */}
-        <section className={`panel flex-col gap-4 ${tab === "drill" ? "flex" : "hidden"} lg:flex`}>
-          <Field label="Beats per bar" info={INFO.beats}>
-            <Segmented
-              ariaLabel="Beats per bar"
-              value={settings.beats}
-              onChange={(beats) => update({ beats })}
-              options={[2, 3, 4, 6].map((count) => ({ value: count, label: String(count) }))}
-            />
-          </Field>
-          <Field label="Move shape every" info={INFO.advance}>
-            <Segmented
-              ariaLabel="Move shape every"
-              value={settings.advanceBars}
-              onChange={(advanceBars) => update({ advanceBars })}
-              options={[
-                { value: 0, label: "Off" },
-                { value: 1, label: "1 bar" },
-                { value: 2, label: "2 bars" },
-                { value: 4, label: "4 bars" },
-                { value: 8, label: "8 bars" },
-              ]}
-            />
-          </Field>
-          <Field label="Direction" info={INFO.direction}>
-            <ChipGroup
-              ariaLabel="Direction"
-              value={settings.advanceMode}
-              onChange={(advanceMode) =>
-                update((current) => ({
-                  advanceMode,
-                  pairIndex:
-                    current.pairIndex === current.positionIndex
-                      ? (current.positionIndex + 2) % positions.length
-                      : current.pairIndex,
-                }))
-              }
-              options={ADVANCE_MODES}
-            />
-          </Field>
-          {settings.advanceMode === "pair" ? (
-            <Field label="Second shape" info={INFO.pair}>
+          <div className="panel flex flex-col gap-4">
+            <Field label="Shape" info={INFO.shape}>
               <ChipGroup
-                ariaLabel="Second shape"
-                value={settings.pairIndex}
-                onChange={(pairIndex) =>
-                  update((current) => ({
-                    pairIndex,
-                    positionIndex:
-                      pairIndex === current.positionIndex ? (pairIndex + 1) % positions.length : current.positionIndex,
-                  }))
-                }
-                options={shapeOptions}
+                ariaLabel="Shape"
+                value={settings.allShapes ? "all" : String(settings.positionIndex)}
+                onChange={(value) => (value === "all" ? update({ allShapes: true }) : selectPosition(Number(value)))}
+                options={shapeChoices}
               />
             </Field>
-          ) : null}
-          <p className="text-[13px] leading-relaxed text-bone-dim">
-            {settings.advanceBars === 0
-              ? "Shapes stay put. Turn this on to be moved between positions in time."
-              : settings.advanceMode === "pair"
-                ? `Sliding between the ${position.name} and ${pairPosition?.name} shapes every ${settings.advanceBars} ${settings.advanceBars === 1 ? "bar" : "bars"}. ${view.pairDrawn ? "The dashed box is where you are going next." : "The highlight moves between the two."}`
-                : `Moving ${settings.advanceMode === "random" ? "to a random shape" : settings.advanceMode === "down" ? "down the neck" : "up the neck"} every ${settings.advanceBars} ${settings.advanceBars === 1 ? "bar" : "bars"}.`}
-          </p>
+            {view.scaleAvailable ? (
+              <Field
+                label="Scale"
+                info={INFO.scale}
+                action={
+                  <button
+                    type="button"
+                    className="chip chip-sm"
+                    aria-pressed={settings.showScale}
+                    onClick={() => update({ showScale: !settings.showScale })}
+                  >
+                    {settings.showScale ? "Shown" : "Hidden"}
+                  </button>
+                }
+              >
+                {settings.showScale ? (
+                  <ChipGroup
+                    ariaLabel="Scale"
+                    value={settings.scale}
+                    onChange={(scale) => update({ scale })}
+                    options={Object.keys(SCALES[settings.tonality]).map((name) => ({ value: name, label: name }))}
+                  />
+                ) : (
+                  <p className="text-[13px] leading-relaxed text-bone-dim">
+                    Chord tones only: the notes the shape is holding down, and nothing else.
+                  </p>
+                )}
+              </Field>
+            ) : null}
+            {view.note ? (
+              <p className="rounded-xl border border-line bg-ink/40 p-3 text-[13px] leading-relaxed text-bone-dim">
+                {view.note}
+              </p>
+            ) : null}
+          </div>
         </section>
+      ) : (
+        /* Practice: the clock drives and you play. */
+        <section aria-label="Practice" className="flex flex-1 flex-col gap-3">
+          <Transport
+            playing={metronome.playing}
+            onToggle={metronome.toggle}
+            bpm={settings.bpm}
+            onBpm={setBpm}
+            beats={settings.beats}
+            beat={metronome.beat}
+            bar={metronome.bar}
+          />
 
-        {/* Sound */}
-        <section className={`panel flex-col gap-4 ${tab === "sound" ? "flex" : "hidden"} lg:flex`}>
-          <Field label="Metronome" info={INFO.click}>
-            <div className="flex flex-wrap items-center gap-2">
-              <Toggle on={settings.click} onChange={(click) => update({ click })}>
-                {settings.click ? "Click on" : "Click off"}
-              </Toggle>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            <div className="panel flex flex-col gap-4">
+              <Field label="Drill" info={INFO.drill}>
+                <ChipGroup
+                  ariaLabel="Drill"
+                  value={settings.drill}
+                  onChange={(value: Drill) => update({ drill: value })}
+                  options={DRILLS.map((entry) => ({ value: entry.id, label: entry.name }))}
+                />
+              </Field>
+              <p className="text-[13px] leading-relaxed text-bone-dim">{drill.blurb}</p>
             </div>
-          </Field>
-          <Slider
-            label="Click volume"
-            value={Math.round(settings.clickVolume * 100)}
-            min={0}
-            max={100}
-            onChange={(value) => update({ clickVolume: value / 100 })}
-            display={`${Math.round(settings.clickVolume * 100)}%`}
-          />
-          <Field label="Drone" info={INFO.drone}>
-            <div className="flex flex-wrap items-center gap-2">
-              <Toggle on={settings.drone} onChange={(drone) => update({ drone })}>
-                {settings.drone ? `${KEYS[settings.root]} drone on` : "Drone off"}
-              </Toggle>
-              <Toggle on={settings.droneFifth} onChange={(droneFifth) => update({ droneFifth })}>
-                With fifth
-              </Toggle>
+
+            <div className="panel flex flex-col gap-4">
+              {settings.drill === "spider" ? (
+                <>
+                  <Field label="Start fret" info={INFO.spiderStart}>
+                    <Slider
+                      label="Start fret"
+                      value={settings.spiderStartFret}
+                      min={1}
+                      max={FRET_COUNT - 3}
+                      onChange={(value) => update({ spiderStartFret: value })}
+                      display={`fret ${settings.spiderStartFret}`}
+                    />
+                  </Field>
+                  <Field label="Finger order" info={INFO.spiderPattern}>
+                    <ChipGroup
+                      ariaLabel="Finger order"
+                      value={settings.spiderPattern}
+                      onChange={(spiderPattern) => update({ spiderPattern })}
+                      options={SPIDER_PATTERNS.map((name) => ({ value: name, label: name }))}
+                    />
+                  </Field>
+                  <Field label="Shape of the pass" info={INFO.spiderShape}>
+                    <div className="flex flex-wrap gap-2">
+                      <Toggle on={settings.spiderBoth} onChange={(spiderBoth) => update({ spiderBoth })}>
+                        Both directions
+                      </Toggle>
+                      <Toggle on={settings.spiderShift} onChange={(spiderShift) => update({ spiderShift })}>
+                        Shift up a fret
+                      </Toggle>
+                    </div>
+                  </Field>
+                </>
+              ) : (
+                <>
+                  <Field label="Move shape every" info={INFO.advance}>
+                    <Segmented
+                      ariaLabel="Move shape every"
+                      value={settings.advanceBars}
+                      onChange={(advanceBars) => update({ advanceBars })}
+                      options={[
+                        { value: 0, label: "Off" },
+                        { value: 1, label: "1 bar" },
+                        { value: 2, label: "2 bars" },
+                        { value: 4, label: "4 bars" },
+                        { value: 8, label: "8 bars" },
+                      ]}
+                    />
+                  </Field>
+                  {settings.drill === "caged" ? (
+                    <Field label="Direction" info={INFO.direction}>
+                      <ChipGroup
+                        ariaLabel="Direction"
+                        value={settings.advanceMode}
+                        onChange={(advanceMode) => update({ advanceMode })}
+                        options={ADVANCE_MODES}
+                      />
+                    </Field>
+                  ) : (
+                    <Field label="Second shape" info={INFO.pair}>
+                      <ChipGroup
+                        ariaLabel="Second shape"
+                        value={settings.pairIndex}
+                        onChange={(pairIndex) =>
+                          update((current) => ({
+                            pairIndex,
+                            positionIndex:
+                              pairIndex === current.positionIndex
+                                ? (pairIndex + 1) % positions.length
+                                : current.positionIndex,
+                          }))
+                        }
+                        options={shapeOptions}
+                      />
+                    </Field>
+                  )}
+                </>
+              )}
             </div>
-          </Field>
-          <Field label="Drone octave" info={INFO.droneOctave}>
-            <Segmented
-              ariaLabel="Drone octave"
-              value={settings.droneOctave}
-              onChange={(droneOctave) => update({ droneOctave })}
-              options={[
-                { value: -1, label: "Low" },
-                { value: 0, label: "Mid" },
-                { value: 1, label: "High" },
-              ]}
-            />
-          </Field>
-          <Slider
-            label="Drone volume"
-            value={Math.round(settings.droneVolume * 100)}
-            min={0}
-            max={100}
-            onChange={(value) => update({ droneVolume: value / 100 })}
-            display={`${Math.round(settings.droneVolume * 100)}%`}
-          />
-          <p className="text-[13px] leading-relaxed text-bone-dim">
-            The drone holds the key centre under whatever you play, which is the quickest way to hear what each degree
-            actually does. Tap any note on the neck to hear it against the drone.
-          </p>
+
+            <div className="panel flex flex-col gap-4">
+              <Field label="Beats per bar" info={INFO.beats}>
+                <Segmented
+                  ariaLabel="Beats per bar"
+                  value={settings.beats}
+                  onChange={(beats) => update({ beats })}
+                  options={[2, 3, 4, 6].map((count) => ({ value: count, label: String(count) }))}
+                />
+              </Field>
+              <Field label="Metronome" info={INFO.click}>
+                <Toggle on={settings.click} onChange={(click) => update({ click })}>
+                  {settings.click ? "Click on" : "Click off"}
+                </Toggle>
+              </Field>
+              <Slider
+                label="Click volume"
+                value={Math.round(settings.clickVolume * 100)}
+                min={0}
+                max={100}
+                onChange={(value) => update({ clickVolume: value / 100 })}
+                display={`${Math.round(settings.clickVolume * 100)}%`}
+              />
+            </div>
+          </div>
         </section>
-      </div>
+      )}
 
       <p className="text-[13px] leading-relaxed text-bone-dim">
-        {view.allShapes ? (
+        {view.spiderDrawn ? (
+          <>
+            <b className="font-medium text-bone">Spider walk, {settings.spiderPattern}</b>, one note per beat. The
+            filled dot is the note due now and the ringed one is next; the numbers are fingers, not frets. Space starts
+            and stops, arrows change tempo. L and P switch modes.
+          </>
+        ) : view.allShapes ? (
           <>
             <b className="font-medium text-bone">
               {keyLabel(settings.root, settings.tonality)} chord tones across the whole neck
             </b>
             . Each dot takes the colour of the shape that frets it, and the bars under the neck show where each shape
             sits. A dot split between two colours belongs to both shapes at once, which is the seam you slide across.
-            Faint dots are chord tones no shape frets. Space starts the metronome, arrows change tempo and position.
+            Faint dots are chord tones no shape frets. L and P switch modes.
           </>
         ) : (
           <>
@@ -475,8 +553,8 @@ export default function Page() {
             around the <b className="font-medium text-bone">{position.name} shape</b>
             {position.fret === 0 ? " at the nut" : `, index finger at fret ${position.fret}`}. Filled dot is the root,
             thick ring is a chord tone you are already fretting
-            {view.scaleDrawn ? ", thin ring is the rest of the scale" : ""}. Space starts the metronome, arrows
-            change tempo and position.
+            {view.scaleDrawn ? ", thin ring is the rest of the scale" : ""}. Arrows change position, L and P switch
+            modes.
           </>
         )}
       </p>

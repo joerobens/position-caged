@@ -14,6 +14,7 @@ import {
   type Tonality,
 } from "@/lib/music";
 import type { Labels, Zoom } from "@/lib/settings";
+import type { SpiderStep } from "@/lib/drills";
 
 /** Neck geometry, in SVG user units. */
 const NUT_X = 64;
@@ -52,6 +53,8 @@ type Props = {
   allShapes?: boolean;
   /** The scale layer. Off leaves the chord tones on their own. */
   showScale?: boolean;
+  /** A finger exercise, with the cursor sitting on the note due now. */
+  spider?: { steps: SpiderStep[]; index: number } | null;
   onPlayNote?: (midi: number) => void;
 };
 
@@ -88,9 +91,28 @@ function Fretboard({
   labels,
   allShapes = false,
   showScale = true,
+  spider = null,
   onPlayNote,
 }: Props) {
+  const spiderWindow = useMemo(() => {
+    if (!spider?.steps.length) return null;
+    const step = spider.steps[spider.index] ?? spider.steps[0];
+    const low = step.fret - step.finger + 1;
+    return { low, high: Math.min(FRET_COUNT, low + 3) };
+  }, [spider]);
+
   const view = useMemo(() => {
+    if (spiderWindow) {
+      const left = blockLeft(spiderWindow.low);
+      const right = blockRight(spiderWindow.high);
+      const gutter = spiderWindow.low === 0 ? -28 : left - 34;
+      return {
+        primary: spiderWindow,
+        secondary: null,
+        labelX: gutter + 14,
+        box: [gutter, 0, right - gutter + 16, BOARD_HEIGHT],
+      };
+    }
     const primary = windowFor(position);
     const secondary = pair ? windowFor(pair) : null;
     const span = secondary
@@ -111,7 +133,7 @@ function Fretboard({
       labelX: zoom === "position" && !allShapes ? gutter + 14 : 14,
       box,
     };
-  }, [position, pair, zoom, allShapes]);
+  }, [position, pair, zoom, allShapes, spiderWindow]);
 
   const colour = position.shape.colour;
   const chordTones = useMemo(() => chordToneKeys(position), [position]);
@@ -141,7 +163,7 @@ function Fretboard({
    * behind them faintly so the neck reads as full rather than as five islands.
    */
   const allNotes = useMemo(() => {
-    if (!allShapes || !grips) return null;
+    if (!allShapes || spiderWindow || !grips) return null;
     return chordTonesOnNeck(root, tonality).map((note) => {
       const key = `${note.string}:${note.fret}`;
       const owners = grips.get(key) ?? [];
@@ -157,10 +179,10 @@ function Fretboard({
         midi: STRING_MIDI[note.string] + note.fret,
       };
     });
-  }, [allShapes, grips, root, tonality, colourOf, colour, labels]);
+  }, [allShapes, spiderWindow, grips, root, tonality, colourOf, colour, labels]);
 
   const notes = useMemo(() => {
-    if (allShapes) return [];
+    if (allShapes || spiderWindow) return [];
     const out: {
       key: string;
       x: number;
@@ -192,7 +214,7 @@ function Fretboard({
       }
     }
     return out;
-  }, [allShapes, view, root, intervals, chordTones, labels, showScale]);
+  }, [allShapes, spiderWindow, view, root, intervals, chordTones, labels, showScale]);
 
   const barre = position.shape.barre;
   const primaryLeft = blockLeft(view.primary.low);
@@ -205,9 +227,11 @@ function Fretboard({
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={
-        allShapes
-          ? "Guitar neck showing all five CAGED shapes, each in its own colour"
-          : `Guitar neck showing the ${position.name} shape at fret ${position.fret}`
+        spiderWindow
+          ? `Guitar neck showing a spider walk across frets ${spiderWindow.low} to ${spiderWindow.high}`
+          : allShapes
+            ? "Guitar neck showing all five CAGED shapes, each in its own colour"
+            : `Guitar neck showing the ${position.name} shape at fret ${position.fret}`
       }
     >
       {/* position shading */}
@@ -232,7 +256,7 @@ function Fretboard({
         height={5 * STRING_GAP + 22}
         rx={10}
         fill={colour}
-        opacity={allShapes ? 0.05 : zoom === "position" ? 0.06 : 0.09}
+        opacity={spiderWindow ? 0.04 : allShapes ? 0.05 : zoom === "position" ? 0.06 : 0.09}
       />
 
       {/* frets */}
@@ -282,7 +306,7 @@ function Fretboard({
       ))}
 
       {/* muted strings, for shapes played from the nut */}
-      {position.fret === 0 && !allShapes
+      {position.fret === 0 && !allShapes && !spiderWindow
         ? position.shape.frets.map((offset, string) =>
             offset === null ? (
               <text key={`mute-${string}`} className="fb-mark" x={NUT_X - 20} y={stringY(string) + 4} textAnchor="middle">
@@ -293,7 +317,7 @@ function Fretboard({
         : null}
 
       {/* barre */}
-      {barre && position.fret > 0 && !allShapes ? (
+      {barre && position.fret > 0 && !allShapes && !spiderWindow ? (
         <rect
           x={fretX(position.fret) - 9}
           y={stringY(barre[1]) - 9}
@@ -399,6 +423,54 @@ function Fretboard({
         );
       })}
 
+      {/* the finger exercise: one bright dot moving, the rest of the box behind it */}
+      {spider && spiderWindow
+        ? (() => {
+            const current = spider.steps[spider.index];
+            const next = spider.steps[(spider.index + 1) % spider.steps.length];
+            // Every position in this four fret box, so the shape of the exercise is visible.
+            const cells: { string: number; fret: number; finger: number }[] = [];
+            for (let string = 0; string < 6; string++) {
+              for (let finger = 1; finger <= 4; finger++) {
+                const fret = spiderWindow.low + finger - 1;
+                if (fret <= FRET_COUNT) cells.push({ string, fret, finger });
+              }
+            }
+            return cells.map((cell) => {
+              const isCurrent = current && cell.string === current.string && cell.fret === current.fret;
+              const isNext = !isCurrent && next && cell.string === next.string && cell.fret === next.fret;
+              return (
+                <g
+                  key={`spider-${cell.string}:${cell.fret}`}
+                  onPointerDown={onPlayNote ? () => onPlayNote(STRING_MIDI[cell.string] + cell.fret) : undefined}
+                  style={onPlayNote ? { cursor: "pointer" } : undefined}
+                >
+                  <circle cx={fretX(cell.fret)} cy={stringY(cell.string)} r={15} fill="transparent" />
+                  <circle
+                    cx={fretX(cell.fret)}
+                    cy={stringY(cell.string)}
+                    r={isCurrent ? 14 : 11}
+                    fill={isCurrent ? colour : "#241E1A"}
+                    stroke={isCurrent ? colour : isNext ? colour : "#7A6B5C"}
+                    strokeWidth={isCurrent ? 0 : isNext ? 2 : 1}
+                    opacity={isCurrent || isNext ? 1 : 0.45}
+                  />
+                  <text
+                    className="fb-dot"
+                    x={fretX(cell.fret)}
+                    y={stringY(cell.string) + 4}
+                    textAnchor="middle"
+                    fill={isCurrent ? "#12100E" : isNext ? colour : "#948A7D"}
+                    opacity={isCurrent || isNext ? 1 : 0.45}
+                  >
+                    {cell.finger}
+                  </text>
+                </g>
+              );
+            });
+          })()
+        : null}
+
       {/* where each shape sits, and which colour is which */}
       {allShapes
         ? positions.map((entry, index) => {
@@ -433,12 +505,16 @@ function Fretboard({
       ) : null}
       <text
         className="fb-shape"
-        x={allShapes ? 14 : Math.max(view.box[0] + 54, fretX(position.fret === 0 ? 0 : position.fret))}
+        x={allShapes || spiderWindow ? view.box[0] + 14 : Math.max(view.box[0] + 54, fretX(position.fret === 0 ? 0 : position.fret))}
         y={TOP_Y - 20}
-        textAnchor={allShapes ? "start" : "middle"}
+        textAnchor={allShapes || spiderWindow ? "start" : "middle"}
         fill={colour}
       >
-        {allShapes ? `All five shapes · ${position.name} highlighted` : `${position.name} shape`}
+        {spiderWindow
+          ? `Spider walk · frets ${spiderWindow.low} to ${spiderWindow.high}`
+          : allShapes
+            ? `All five shapes · ${position.name} highlighted`
+            : `${position.name} shape`}
       </text>
     </svg>
   );

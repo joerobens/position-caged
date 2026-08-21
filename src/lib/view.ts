@@ -1,4 +1,4 @@
-import type { Settings, Zoom } from "./settings";
+import type { Mode, Settings, Zoom } from "./settings";
 
 /**
  * What the current settings actually mean, worked out once.
@@ -8,6 +8,7 @@ import type { Settings, Zoom } from "./settings";
  * could be confusing, `note` explains what took it over.
  */
 export type ViewModel = {
+  mode: Mode;
   allShapes: boolean;
   zoom: Zoom;
   /** The scale layer is on the neck. */
@@ -18,21 +19,33 @@ export type ViewModel = {
   scaleAvailable: boolean;
   /** The second shape of a slide drill is drawn as a dashed box. */
   pairDrawn: boolean;
+  /** The neck is showing a finger exercise rather than a shape. */
+  spiderDrawn: boolean;
+  /** Bars between shape changes, once the drill has had its say. */
+  advanceBars: number;
   /** Why the controls above are missing, when they are. */
   note: string | null;
 };
 
 export function deriveView(settings: Settings): ViewModel {
-  const { allShapes } = settings;
+  const { allShapes, mode, drill } = settings;
+  const practising = mode === "practice";
+  // The spider walk owns the neck: it is a finger exercise, not a shape.
+  const spiderDrawn = practising && drill === "spider";
+
   return {
-    allShapes,
+    mode,
+    allShapes: allShapes && !spiderDrawn,
     // All five shapes only means anything across the whole neck.
-    zoom: allShapes ? "neck" : settings.zoom,
-    scaleDrawn: !allShapes && settings.showScale,
-    zoomAvailable: !allShapes,
-    scaleAvailable: !allShapes,
-    pairDrawn: !allShapes && settings.advanceMode === "pair",
-    note: allShapes
+    zoom: spiderDrawn ? "position" : allShapes ? "neck" : settings.zoom,
+    scaleDrawn: !allShapes && !spiderDrawn && settings.showScale,
+    zoomAvailable: !allShapes && !spiderDrawn,
+    scaleAvailable: !allShapes && !spiderDrawn,
+    pairDrawn: !allShapes && !spiderDrawn && practising && drill === "slide",
+    spiderDrawn,
+    // Only the shape drills move you between positions.
+    advanceBars: practising && (drill === "caged" || drill === "slide") ? settings.advanceBars : 0,
+    note: allShapes && !spiderDrawn
       ? "All five covers the whole neck and draws chord tones only, so the view and the scale layer are set for you here. A seven note scale across five positions is around ninety dots, which reads as noise from a music stand."
       : null,
   };
