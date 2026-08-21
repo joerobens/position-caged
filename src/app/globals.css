@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #12100e;
+  --color-panel: #1b1714;
+  --color-board: #241e1a;
+  --color-board-edge: #3a302a;
+  --color-line: #332b25;
+  --color-bone: #ede6d8;
+  --color-bone-dim: #948a7d;
+
+  --font-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-control: 10px;
+  --radius-panel: 16px;
+}
+
+/*
+ * The accent tracks the CAGED shape you are on: each shape owns a colour, so the
+ * accent changing is information, not decoration. Set from the client on every
+ * shape change.
+ */
+:root {
+  --accent: #4fc7a1;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-bone);
+  font-family: var(--font-display);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* Fretboard SVG text. Set here rather than inline so the SVG stays readable. */
+.fb-dot {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+.fb-mark {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--color-bone-dim);
+}
+.fb-shape {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+@layer components {
+  .label {
+    @apply text-[11px] uppercase tracking-[0.09em] text-bone-dim;
+  }
+
+  /* One control shape for the whole app: 10px pills, 40px minimum touch target. */
+  .chip {
+    @apply min-h-10 rounded-[10px] border border-line px-3 py-2 text-sm text-bone transition-colors;
+    @apply hover:border-bone-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone;
+    touch-action: manipulation;
+  }
+  .chip[aria-pressed="true"],
+  .chip[data-on="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+
+  .segmented {
+    @apply flex gap-1 rounded-xl border border-line bg-panel p-1;
+  }
+  .segmented > button {
+    @apply min-h-9 rounded-lg px-3 py-1.5 text-sm text-bone transition-colors;
+    @apply hover:text-bone focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone;
+    touch-action: manipulation;
+  }
+  .segmented > button[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+
+  .panel {
+    @apply rounded-2xl border border-line bg-panel p-4;
+  }
+}
+
+/* Range inputs, styled to match the chips. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 40px;
+  margin: 0;
+  width: 100%;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--color-line);
+  border-radius: 2px;
+}
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: var(--color-line);
+  border-radius: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: -11px;
+  border: none;
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--color-bone);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
