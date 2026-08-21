@@ -1,5 +1,6 @@
 import { EQUIVALENT_SCALE, SCALES, type Tonality } from "./music";
 import { SPIDER_PATTERNS, type Drill, type SpiderPattern } from "./drills";
+import type { ThemePreference } from "./theme";
 
 /** Where the next shape comes from in the CAGED drill. */
 export type AdvanceMode = "up" | "down" | "random";
@@ -34,6 +35,8 @@ export type Settings = {
   rootMap: boolean;
   /** The scale layer. Off leaves just the chord tones. */
   showScale: boolean;
+  /** Follow the system, or override it. */
+  theme: ThemePreference;
   /** Reading the neck, or playing to the clock. */
   mode: Mode;
   drill: Drill;
@@ -66,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   allShapes: false,
   rootMap: false,
   showScale: true,
+  theme: "system",
   mode: "learn",
   drill: "caged",
   spiderStartFret: 5,

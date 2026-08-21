@@ -16,6 +16,7 @@ import {
 } from "@/lib/music";
 import type { Labels, Zoom } from "@/lib/settings";
 import type { SpiderStep } from "@/lib/drills";
+import type { Palette } from "@/lib/theme";
 
 /** Neck geometry, in SVG user units. */
 const NUT_X = 64;
@@ -61,6 +62,8 @@ type Props = {
   showScale?: boolean;
   /** A finger exercise, with the cursor sitting on the note due now. */
   spider?: { steps: SpiderStep[]; index: number } | null;
+  /** Board and note colours for the active theme. */
+  palette: Palette;
   onPlayNote?: (midi: number) => void;
 };
 
@@ -99,6 +102,7 @@ function Fretboard({
   rootMap = false,
   showScale = true,
   spider = null,
+  palette,
   onPlayNote,
 }: Props) {
   const spiderWindow = useMemo(() => {
@@ -142,14 +146,14 @@ function Fretboard({
     };
   }, [position, pair, zoom, allShapes, rootMap, spiderWindow]);
 
-  const colour = position.shape.colour;
+  const colour = palette.shapes[position.name];
   const chordTones = useMemo(() => chordToneKeys(position), [position]);
   const grips = useMemo(() => (allShapes || rootMap ? gripMembership(positions) : null), [allShapes, rootMap, positions]);
   const colourOf = useMemo(() => {
     const map = new Map<string, string>();
-    positions.forEach((entry) => map.set(entry.name, entry.shape.colour));
+    positions.forEach((entry) => map.set(entry.name, palette.shapes[entry.name]));
     return map;
-  }, [positions]);
+  }, [positions, palette]);
 
   const visibleFrets = useMemo(() => {
     const frets: number[] = [];
@@ -208,10 +212,24 @@ function Fretboard({
           x: fretX(fret),
           y: stringY(string),
           midi: STRING_MIDI[string] + fret,
-          colour: owners.length ? (colourOf.get(owners[0]) ?? colour) : "#948A7D",
+          colour: owners.length ? (colourOf.get(owners[0]) ?? colour) : palette.dim,
         });
       }
     }
+    // The chord tones each shape frets, faint, so a root is visibly the anchor of
+    // a shape rather than a dot floating on its own.
+    const shadows: { key: string; x: number; y: number; colour: string }[] = [];
+    grips?.forEach((owners, cell) => {
+      const [string, fret] = cell.split(":").map(Number);
+      if (degreeAt(string, fret, root) === 0) return;
+      shadows.push({
+        key: cell,
+        x: fretX(fret),
+        y: stringY(string),
+        colour: colourOf.get(owners[0]) ?? colour,
+      });
+    });
+
     const links: { key: string; a: (typeof notes)[number]; b: (typeof notes)[number]; wide: boolean }[] = [];
     for (const a of notes) {
       for (const b of notes) {
@@ -225,8 +243,8 @@ function Fretboard({
         if (octave || doubleOctave) links.push({ key: `${a.key}-${b.key}`, a, b, wide: doubleOctave });
       }
     }
-    return { notes, links };
-  }, [rootMap, root, grips, colourOf, colour]);
+    return { notes, links, shadows };
+  }, [rootMap, root, grips, colourOf, colour, palette]);
 
   const notes = useMemo(() => {
     if (allShapes || rootMap || spiderWindow) return [];
@@ -264,6 +282,8 @@ function Fretboard({
   }, [allShapes, rootMap, spiderWindow, view, root, intervals, chordTones, labels, showScale]);
 
   const barre = position.shape.barre;
+  // Anything that shows the whole neck puts its heading in the top left corner.
+  const wideView = allShapes || rootMap || !!spiderWindow;
   const primaryLeft = blockLeft(view.primary.low);
   const primaryRight = blockRight(view.primary.high);
 
@@ -291,9 +311,9 @@ function Fretboard({
           width={blockRight(view.secondary.high) - blockLeft(view.secondary.low)}
           height={5 * STRING_GAP + 22}
           rx={10}
-          fill={pair.shape.colour}
+          fill={palette.shapes[pair.name]}
           opacity={0.05}
-          stroke={pair.shape.colour}
+          stroke={palette.shapes[pair.name]}
           strokeOpacity={0.25}
           strokeDasharray="4 5"
         />
@@ -316,7 +336,7 @@ function Fretboard({
           y1={TOP_Y}
           x2={NUT_X + fret * FRET_WIDTH}
           y2={TOP_Y + 5 * STRING_GAP}
-          stroke={fret === 0 ? "#E4DCCB" : "#4A3F37"}
+          stroke={fret === 0 ? palette.nut : palette.fret}
           strokeWidth={fret === 0 ? 5 : 1.5}
           strokeLinecap="round"
         />
@@ -330,17 +350,17 @@ function Fretboard({
           y1={stringY(string)}
           x2={NUT_X + FRET_COUNT * FRET_WIDTH}
           y2={stringY(string)}
-          stroke="#5C5044"
+          stroke={palette.string}
           strokeWidth={1.6 - string * 0.14}
         />
       ))}
 
       {/* inlays */}
       {INLAYS.filter((f) => f <= FRET_COUNT).map((fret) => (
-        <circle key={`inlay-${fret}`} cx={NUT_X + (fret - 0.5) * FRET_WIDTH} cy={TOP_Y + 2.5 * STRING_GAP} r={4.5} fill="#3E342C" />
+        <circle key={`inlay-${fret}`} cx={NUT_X + (fret - 0.5) * FRET_WIDTH} cy={TOP_Y + 2.5 * STRING_GAP} r={4.5} fill={palette.inlay} />
       ))}
-      <circle cx={NUT_X + 11.5 * FRET_WIDTH} cy={TOP_Y + 1.5 * STRING_GAP} r={4.5} fill="#3E342C" />
-      <circle cx={NUT_X + 11.5 * FRET_WIDTH} cy={TOP_Y + 3.5 * STRING_GAP} r={4.5} fill="#3E342C" />
+      <circle cx={NUT_X + 11.5 * FRET_WIDTH} cy={TOP_Y + 1.5 * STRING_GAP} r={4.5} fill={palette.inlay} />
+      <circle cx={NUT_X + 11.5 * FRET_WIDTH} cy={TOP_Y + 3.5 * STRING_GAP} r={4.5} fill={palette.inlay} />
 
       {/* fret numbers and string names */}
       {visibleFrets.map((fret) => (
@@ -380,7 +400,7 @@ function Fretboard({
 
       {/* notes, one position at a time */}
       {notes.map((note) => {
-        const tone = note.ghost ? (pair?.shape.colour ?? colour) : colour;
+        const tone = note.ghost ? (pair ? palette.shapes[pair.name] : colour) : colour;
         return (
           <g
             key={note.key}
@@ -392,21 +412,21 @@ function Fretboard({
             {note.kind === "root" ? (
               <>
                 <circle cx={note.x} cy={note.y} r={12} fill={tone} />
-                <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill="#12100E">
+                <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill={palette.onAccent}>
                   {note.text}
                 </text>
               </>
             ) : note.kind === "chord" ? (
               <>
-                <circle cx={note.x} cy={note.y} r={12} fill="#241E1A" stroke={tone} strokeWidth={2.5} />
+                <circle cx={note.x} cy={note.y} r={12} fill={palette.dotFill} stroke={tone} strokeWidth={2.5} />
                 <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill={tone}>
                   {note.text}
                 </text>
               </>
             ) : (
               <>
-                <circle cx={note.x} cy={note.y} r={11} fill="#241E1A" stroke="#7A6B5C" strokeWidth={1} />
-                <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill="#948A7D">
+                <circle cx={note.x} cy={note.y} r={11} fill={palette.dotFill} stroke={palette.scaleRing} strokeWidth={1} />
+                <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill={palette.dim}>
                   {note.text}
                 </text>
               </>
@@ -428,7 +448,7 @@ function Fretboard({
           >
             <circle cx={note.x} cy={note.y} r={15} fill="transparent" />
             {!owned ? (
-              <circle cx={note.x} cy={note.y} r={11} fill="#241E1A" stroke="#7A6B5C" strokeWidth={1} />
+              <circle cx={note.x} cy={note.y} r={11} fill={palette.dotFill} stroke={palette.scaleRing} strokeWidth={1} />
             ) : note.isRoot ? (
               // One owner is a plain disc: a wedge spanning the full 360 has identical
               // endpoints, and SVG draws nothing at all for a zero length arc.
@@ -443,7 +463,7 @@ function Fretboard({
               )
             ) : (
               <>
-                <circle cx={note.x} cy={note.y} r={12} fill="#241E1A" />
+                <circle cx={note.x} cy={note.y} r={12} fill={palette.dotFill} />
                 {note.colours.length === 1 ? (
                   <circle cx={note.x} cy={note.y} r={12} fill="none" stroke={note.colours[0]} strokeWidth={2.5} />
                 ) : (
@@ -464,7 +484,7 @@ function Fretboard({
               x={note.x}
               y={note.y + 4}
               textAnchor="middle"
-              fill={!owned ? "#948A7D" : note.isRoot ? "#12100E" : note.colours[0]}
+              fill={!owned ? palette.dim : note.isRoot ? palette.onAccent : note.colours[0]}
             >
               {note.text}
             </text>
@@ -475,6 +495,9 @@ function Fretboard({
       {/* the roots, and the octave links that join them up */}
       {rootLattice ? (
         <>
+          {rootLattice.shadows.map((shadow) => (
+            <circle key={`shadow-${shadow.key}`} cx={shadow.x} cy={shadow.y} r={9} fill={shadow.colour} opacity={0.2} />
+          ))}
           {rootLattice.links.map((link) => (
             <line
               key={link.key}
@@ -482,7 +505,7 @@ function Fretboard({
               y1={link.a.y}
               x2={link.b.x}
               y2={link.b.y}
-              stroke={link.wide ? "#7A6B5C" : colour}
+              stroke={link.wide ? palette.scaleRing : colour}
               strokeWidth={link.wide ? 1 : 1.5}
               strokeOpacity={link.wide ? 0.35 : 0.5}
               strokeDasharray={link.wide ? "3 5" : undefined}
@@ -496,7 +519,7 @@ function Fretboard({
             >
               <circle cx={note.x} cy={note.y} r={15} fill="transparent" />
               <circle cx={note.x} cy={note.y} r={13} fill={note.colour} />
-              <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill="#12100E">
+              <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill={palette.onAccent}>
                 {labels === "none" ? "" : labels === "notes" ? noteNameAt(note.string, note.fret) : "1"}
               </text>
             </g>
@@ -531,8 +554,8 @@ function Fretboard({
                     cx={fretX(cell.fret)}
                     cy={stringY(cell.string)}
                     r={isCurrent ? 14 : 11}
-                    fill={isCurrent ? colour : "#241E1A"}
-                    stroke={isCurrent ? colour : isNext ? colour : "#7A6B5C"}
+                    fill={isCurrent ? colour : palette.dotFill}
+                    stroke={isCurrent ? colour : isNext ? colour : palette.scaleRing}
                     strokeWidth={isCurrent ? 0 : isNext ? 2 : 1}
                     opacity={isCurrent || isNext ? 1 : 0.45}
                   />
@@ -541,7 +564,7 @@ function Fretboard({
                     x={fretX(cell.fret)}
                     y={stringY(cell.string) + 4}
                     textAnchor="middle"
-                    fill={isCurrent ? "#12100E" : isNext ? colour : "#948A7D"}
+                    fill={isCurrent ? palette.onAccent : isNext ? colour : palette.dim}
                     opacity={isCurrent || isNext ? 1 : 0.45}
                   >
                     {cell.finger}
@@ -562,8 +585,8 @@ function Fretboard({
             const current = entry.name === position.name;
             return (
               <g key={`map-${entry.name}`} opacity={current ? 1 : 0.5}>
-                <rect x={left} y={y} width={right - left} height={7} rx={3.5} fill={entry.shape.colour} />
-                <text className="fb-mark" x={left - 10} y={y + 7} textAnchor="end" fill={entry.shape.colour}>
+                <rect x={left} y={y} width={right - left} height={7} rx={3.5} fill={palette.shapes[entry.name]} />
+                <text className="fb-mark" x={left - 10} y={y + 7} textAnchor="end" fill={palette.shapes[entry.name]}>
                   {entry.name}
                 </text>
               </g>
@@ -578,7 +601,7 @@ function Fretboard({
           x={Math.max(view.box[0] + 54, fretX(pair.fret === 0 ? 0 : pair.fret))}
           y={TOP_Y - 20}
           textAnchor="middle"
-          fill={pair.shape.colour}
+          fill={palette.shapes[pair.name]}
           opacity={0.5}
         >
           {pair.name}
@@ -586,19 +609,24 @@ function Fretboard({
       ) : null}
       <text
         className="fb-shape"
-        x={allShapes || spiderWindow ? view.box[0] + 14 : Math.max(view.box[0] + 54, fretX(position.fret === 0 ? 0 : position.fret))}
+        x={wideView ? view.box[0] + 14 : Math.max(view.box[0] + 54, fretX(position.fret === 0 ? 0 : position.fret))}
         y={TOP_Y - 20}
-        textAnchor={allShapes || spiderWindow ? "start" : "middle"}
+        textAnchor={wideView ? "start" : "middle"}
         fill={colour}
       >
         {spiderWindow
           ? `Spider walk · frets ${spiderWindow.low} to ${spiderWindow.high}`
           : rootMap
-            ? `Every ${KEYS[root]} on the neck · lines are octaves`
+            ? `Every ${KEYS[root]} on the neck`
             : allShapes
               ? `All five shapes · ${position.name} highlighted`
               : `${position.name} shape`}
       </text>
+      {rootMap ? (
+        <text className="voice-txt" x={view.box[0] + view.box[2] - 16} y={TOP_Y - 20} textAnchor="end" fill={colour} opacity={0.75}>
+          lines are octaves
+        </text>
+      ) : null}
     </svg>
   );
 }

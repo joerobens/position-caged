@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDown, CircleHalf, Moon, Sun } from "@phosphor-icons/react";
 import { Segmented, Slider, Toggle } from "./controls";
 import { keyLabel, type Tonality } from "@/lib/music";
+import type { ThemePreference } from "@/lib/theme";
 
 /**
  * Always on, in both modes. The drone sounds the key rather than belonging to a
@@ -16,6 +17,7 @@ export default function KeyBar({
   droneFifth,
   droneOctave,
   droneVolume,
+  theme,
   onChange,
 }: {
   root: number;
@@ -24,11 +26,13 @@ export default function KeyBar({
   droneFifth: boolean;
   droneOctave: number;
   droneVolume: number;
+  theme: ThemePreference;
   onChange: (patch: {
     drone?: boolean;
     droneFifth?: boolean;
     droneOctave?: number;
     droneVolume?: number;
+    theme?: ThemePreference;
   }) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -42,15 +46,19 @@ export default function KeyBar({
         <Toggle on={drone} onChange={(value) => onChange({ drone: value })}>
           {drone ? "Drone on" : "Drone off"}
         </Toggle>
-        <button
-          type="button"
-          className="chip ml-auto flex items-center gap-1.5"
-          aria-expanded={open}
-          onClick={() => setOpen((current) => !current)}
-        >
-          Drone settings
-          <CaretDown size={14} weight="bold" style={{ transform: open ? "rotate(180deg)" : undefined }} />
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeButton theme={theme} onChange={(next) => onChange({ theme: next })} />
+          <button
+            type="button"
+            className="chip flex items-center gap-1.5"
+            aria-expanded={open}
+            onClick={() => setOpen((current) => !current)}
+          >
+            <span className="hidden sm:inline">Drone settings</span>
+            <span className="sm:hidden">Drone</span>
+            <CaretDown size={14} weight="bold" style={{ transform: open ? "rotate(180deg)" : undefined }} />
+          </button>
+        </div>
       </div>
       {open ? (
         <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-line pt-3">
@@ -83,5 +91,34 @@ export default function KeyBar({
         </div>
       ) : null}
     </div>
+  );
+}
+
+const THEME_ORDER: ThemePreference[] = ["system", "light", "dark"];
+const THEME_LABEL: Record<ThemePreference, string> = {
+  system: "Theme: following the system",
+  light: "Theme: light",
+  dark: "Theme: dark",
+};
+
+/** Cycles system, light, dark. One button, because it is a preference, not a mode. */
+function ThemeButton({
+  theme,
+  onChange,
+}: {
+  theme: ThemePreference;
+  onChange: (theme: ThemePreference) => void;
+}) {
+  const Icon = theme === "light" ? Sun : theme === "dark" ? Moon : CircleHalf;
+  return (
+    <button
+      type="button"
+      className="chip flex items-center justify-center px-3"
+      aria-label={THEME_LABEL[theme]}
+      title={THEME_LABEL[theme]}
+      onClick={() => onChange(THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length])}
+    >
+      <Icon size={17} weight="bold" />
+    </button>
   );
 }

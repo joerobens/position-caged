@@ -13,6 +13,8 @@ import { DRILLS, SPIDER_PATTERNS, spiderSequence, spiderStepAt, type Drill } fro
 import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
 import { scaleForTonality, type AdvanceMode, type Mode, type Settings } from "@/lib/settings";
 import { deriveView } from "@/lib/view";
+import { paletteFor } from "@/lib/theme";
+import { useTheme } from "@/hooks/useTheme";
 
 const ADVANCE_MODES: { value: AdvanceMode; label: string; title: string }[] = [
   { value: "up", label: "Up the neck", title: "Step to the next shape toward the body" },
@@ -37,6 +39,7 @@ const INFO = {
     "How often the metronome moves you to another shape. The change lands on the downbeat, so you have the bar line to make the move.",
   direction: "Where the next shape comes from. Up and down walk the neck in order; random stops you anticipating it.",
   pair: "The other half of the slide drill. It shows on the neck as a dashed box, so you can see where you are going before you get there.",
+  tap: "Every dot on the neck is playable. Tap one to hear it, which is worth doing with the drone on: that is how a degree stops being a number and starts being a sound.",
   click: "The click itself. Turning it off leaves the pips and the shape changes running silently, which is what you want over a backing track.",
   spiderStart: "The fret the index finger starts on. The exercise covers four frets from there, one per finger.",
   spiderPattern:
@@ -76,6 +79,8 @@ export default function Page() {
   const pairPosition = positions[Math.min(settings.pairIndex, positions.length - 1)];
   const intervals = SCALES[settings.tonality][settings.scale] ?? Object.values(SCALES[settings.tonality])[0];
   const view = deriveView(settings);
+  const resolvedTheme = useTheme(settings.theme);
+  const palette = paletteFor(resolvedTheme);
 
   // The mode lives in the URL as well as in storage, so the iPad can hold a home
   // screen icon for each one and the back button does what it looks like it does.
@@ -101,9 +106,11 @@ export default function Page() {
   );
 
   // The accent follows the shape, so the whole interface tells you where you are.
+  const accent = palette.shapes[position.name];
   useEffect(() => {
-    document.documentElement.style.setProperty("--accent", position.shape.colour);
-  }, [position.shape.colour]);
+    document.documentElement.style.setProperty("--accent", accent);
+    document.documentElement.style.setProperty("--fb-dim", palette.dim);
+  }, [accent, palette.dim]);
 
   const advance = useCallback(() => {
     update((current) => advancePatch(current, positions.length));
@@ -253,7 +260,10 @@ export default function Page() {
                 }`}
           </p>
         </header>
-        <div className="neck-frame">
+        <div className="neck-frame relative">
+          <span className="pointer-events-none absolute right-3 top-2.5 z-10 font-mono text-[10px] uppercase tracking-[0.09em] text-bone-dim opacity-70">
+            tap a note to hear it
+          </span>
         <Fretboard
           position={position}
           positions={positions}
@@ -267,8 +277,9 @@ export default function Page() {
           rootMap={view.rootMap}
           showScale={view.scaleDrawn}
           spider={spider}
-            onPlayNote={playNote}
-          />
+          palette={palette}
+          onPlayNote={playNote}
+        />
         </div>
       </div>
 
@@ -279,6 +290,7 @@ export default function Page() {
         droneFifth={settings.droneFifth}
         droneOctave={settings.droneOctave}
         droneVolume={settings.droneVolume}
+        theme={settings.theme}
         onChange={update}
       />
 
@@ -376,7 +388,7 @@ export default function Page() {
                 }
                 options={shapeChoices}
               />
-              <CycleStrip positions={positions} current={position.name} />
+              <CycleStrip positions={positions} current={position.name} palette={palette} />
             </Field>
             {view.scaleAvailable ? (
               <Field

@@ -2,13 +2,22 @@
 
 import { Fragment } from "react";
 import type { Position } from "@/lib/music";
+import type { Palette } from "@/lib/theme";
 
 /**
  * The five forms in the order they actually appear going up the neck, which is
  * always the CAGED cycle entered at whichever letter the key starts on. The app
  * has always relied on this; it never said so.
  */
-export default function CycleStrip({ positions, current }: { positions: Position[]; current: string }) {
+export default function CycleStrip({
+  positions,
+  current,
+  palette,
+}: {
+  positions: Position[];
+  current: string;
+  palette: Palette;
+}) {
   if (!positions.length) return null;
   const first = positions[0];
   return (
@@ -17,7 +26,7 @@ export default function CycleStrip({ positions, current }: { positions: Position
         <Fragment key={entry.name}>
           <span
             className={entry.name === current ? "font-medium" : "opacity-60"}
-            style={{ color: entry.shape.colour }}
+            style={{ color: palette.shapes[entry.name] }}
           >
             {entry.name}
           </span>
@@ -25,7 +34,7 @@ export default function CycleStrip({ positions, current }: { positions: Position
             &rarr;
           </span>
           {index === positions.length - 1 ? (
-            <span className="opacity-60" style={{ color: first.shape.colour }}>
+            <span className="opacity-60" style={{ color: palette.shapes[first.name] }}>
               {first.name}
             </span>
           ) : null}

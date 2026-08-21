@@ -17,6 +17,32 @@
 }
 
 /*
+ * Dark is the base, so the app still looks like itself if the theme script never
+ * runs. Light overrides the same tokens, either because the system asks for it or
+ * because the toggle does.
+ */
+:root[data-theme="light"] {
+  --color-ink: #efeae0;
+  --color-panel: #fbf8f2;
+  --color-board: #e3d9c8;
+  --color-board-edge: #cdbfa8;
+  --color-line: #dcd3c4;
+  --color-bone: #2b241c;
+  --color-bone-dim: #6b6154;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --color-ink: #efeae0;
+    --color-panel: #fbf8f2;
+    --color-board: #e3d9c8;
+    --color-board-edge: #cdbfa8;
+    --color-line: #dcd3c4;
+    --color-bone: #2b241c;
+    --color-bone-dim: #6b6154;
+  }
+}
+
+/*
  * The accent tracks the CAGED shape you are on: each shape owns a colour, so the
  * accent changing is information, not decoration. Set from the client on every
  * shape change.
@@ -49,7 +75,12 @@ body {
 .fb-mark {
   font-family: var(--font-mono);
   font-size: 11px;
-  fill: var(--color-bone-dim);
+  fill: var(--fb-dim, var(--color-bone-dim));
+}
+.voice-txt {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
 }
 .fb-shape {
   font-family: var(--font-display);
