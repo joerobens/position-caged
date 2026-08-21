@@ -4,8 +4,12 @@ The five CAGED shapes in any key, major or minor, with the scale built around ea
 a drone that holds the key centre, and a metronome that can move you between positions
 while you play.
 
-Built with Next.js, deployed on Vercel. The original single-file version is preserved at
-[`public/classic/index.html`](public/classic/index.html) and is served at `/classic/index.html`.
+Built with Next.js, deployed on Vercel.
+
+The single-file version lives at [`public/classic/index.html`](public/classic/index.html) and is
+served at `/classic/index.html`. It has no build step and no dependencies, and it carries the
+layer model: chord tones, scale, R-3-5 triads on a selectable string set, and ghosts, resolved
+by a precedence ladder rather than by draw order, behind four named practice modes.
 
 ## What it does
 
@@ -70,6 +74,22 @@ with no browser chrome, and the screen stays awake while the metronome is runnin
   matters for finding the shape on the neck.
 - The metronome is scheduled against the Web Audio clock, not `setTimeout`, so it stays in
   time while the neck redraws.
+
+## The single-file app
+
+`public/classic/index.html` runs the same neck through a different model. Every visible fret
+becomes one record carrying its memberships (`inChord`, `inScale`, `inTriad`, `isRoot`,
+`isTopNote`), and a single precedence ladder picks exactly one treatment per note, so layers
+can overlap without overdrawing each other. On top of that:
+
+- **R-3-5 triads** on the `6-5-4`, `5-4-3`, `4-3-2` and `3-2-1` string sets, read off the chord
+  tones around the current shape rather than stored as grips. It names the inversion and marks
+  the top note, which is what you actually choose a comping voicing by.
+- **Practice modes** - Learn the neck, Position, Comping, Lead - which set scope and layers
+  together. Individual layer toggles sit behind Settings and mark the mode as modified rather
+  than deselecting it.
+- **Labels: degrees, notes, or none.** None is the one that tells you whether you know the shape
+  or are only reading it.
 
 ## Ideas for later
 

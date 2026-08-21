@@ -47,6 +47,7 @@ body{
 .dot-txt{font-family:var(--mono);font-size:12px;font-weight:500}
 .mark-txt{font-family:var(--mono);font-size:11px;fill:var(--bone-dim)}
 .shape-txt{font-family:var(--display);font-size:15px;font-weight:500}
+.voice-txt{font-family:var(--display);font-size:14px;font-weight:500}
 
 /* ---------- controls ---------- */
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -62,9 +63,30 @@ button{
 button:hover{border-color:var(--bone-dim)}
 button.on{background:var(--shape);border-color:var(--shape);color:var(--ink);font-weight:500}
 button:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+button[aria-disabled="true"]{opacity:.3;pointer-events:none}
 .seg{display:flex;gap:4px;background:#1B1714;border:1px solid var(--line);border-radius:12px;padding:4px}
 .seg button{border:none;background:transparent;padding:8px 12px;border-radius:8px}
 .seg button.on{background:var(--shape)}
+
+/* ---------- practice modes ---------- */
+/* The primary control. Bigger than the rest because it is what gets pressed
+   one-handed with a guitar on your knee. */
+#presets button{font-size:15px;padding:11px 16px;min-height:46px}
+#presets button.mod::after{
+  content:"";display:inline-block;width:5px;height:5px;border-radius:50%;
+  background:currentColor;margin-left:8px;vertical-align:middle;opacity:.75;
+}
+#gear{margin-left:auto}
+
+#metro-controls{justify-content:space-between;gap:14px}
+
+/* ---------- settings disclosure ---------- */
+#settings{
+  background:#1B1714;border:1px solid var(--line);border-radius:14px;
+  padding:12px;display:flex;flex-wrap:wrap;gap:14px;
+}
+#settings .row{gap:6px}
+#hint{font-size:12px;color:var(--bone-dim);flex-basis:100%;margin:0}
 
 /* ---------- transport ---------- */
 #transport{
@@ -100,7 +122,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 #bars b{color:var(--bone);font-weight:500}
 
 /* ---------- misc ---------- */
-#legend{font-size:12px;color:var(--bone-dim);line-height:1.6}
+#legend{font-size:12px;color:var(--bone-dim);line-height:1.6;margin:0}
 #legend b{color:var(--bone);font-weight:500}
 .hide{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -108,28 +130,29 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
   #bpm{font-size:44px}
   #play{width:60px;height:60px}
   .lab{width:100%;margin-bottom:-2px}
+  #presets button{flex:1 1 42%}
+  #gear{margin-left:0;width:100%}
+}
+/* iPad landscape: the neck can afford more height when the controls sit wide. */
+@media (min-width:820px) and (orientation:landscape){
+  #neck{max-height:52vh}
 }
 </style>
 </head>
 <body>
 
-<div id="neck-wrap"><svg id="neck" role="img" aria-label="Guitar neck showing the current CAGED shape and scale"></svg></div>
-
-<div class="row" style="justify-content:space-between">
-  <div class="grp"><span class="lab">Key</span><span id="keys" class="grp"></span></div>
-  <div class="grp"><span class="lab">View</span>
-    <div class="seg" id="zoom">
-      <button data-z="0">Whole neck</button>
-      <button data-z="1" class="on">Position</button>
-    </div>
-  </div>
-</div>
-
-<div class="row"><span class="lab">Shape</span><span id="shapes" class="grp"></span></div>
+<div id="neck-wrap"><svg id="neck" role="img" aria-label="Guitar neck showing the current CAGED shape"></svg></div>
 
 <div class="row">
-  <div class="grp"><span class="lab">Scale</span><span id="scales" class="grp"></span></div>
+  <span class="lab">Practice</span>
+  <span id="presets" class="grp"></span>
+  <button id="gear" aria-expanded="false" aria-controls="settings">Settings</button>
 </div>
+
+<div class="row"><span class="lab">Key</span><span id="keys" class="grp"></span></div>
+<div class="row"><span class="lab">Shape</span><span id="shapes" class="grp"></span></div>
+<div class="row" id="setrow"><span class="lab">Strings</span><div class="seg" id="sets"></div></div>
+<div class="row" id="scalerow"><span class="lab">Scale</span><span id="scales" class="grp"></span></div>
 
 <div id="transport">
   <button id="play" aria-label="Start metronome"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
@@ -140,7 +163,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
   <div id="bars">bar <b id="barcount">0</b></div>
 </div>
 
-<div class="row" style="justify-content:space-between">
+<div class="row" id="metro-controls">
   <div class="grp"><span class="lab">Beats</span>
     <div class="seg" id="beats">
       <button data-b="2">2</button><button data-b="3">3</button>
@@ -153,14 +176,23 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
       <button data-a="4">4 bars</button><button data-a="8">8 bars</button>
     </div>
   </div>
-  <div class="grp"><span class="lab">Labels</span>
-    <div class="seg" id="labs">
-      <button data-l="deg" class="on">Degrees</button><button data-l="note">Notes</button>
+  <button id="sound" class="on">Click on</button>
+</div>
+
+<div id="settings" class="hide">
+  <div class="row"><span class="lab">Layers</span><span id="layers" class="grp"></span></div>
+  <div class="row"><span class="lab">Scope</span>
+    <div class="seg" id="scope">
+      <button data-s="pos" class="on">One position</button>
+      <button data-s="all">All five</button>
     </div>
   </div>
-  <div class="grp">
-    <button id="sound" class="on">Click on</button>
+  <div class="row"><span class="lab">Labels</span>
+    <div class="seg" id="labs">
+      <button data-l="deg" class="on">Degrees</button><button data-l="note">Notes</button><button data-l="none">None</button>
+    </div>
   </div>
+  <p id="hint"></p>
 </div>
 
 <p id="legend"></p>
@@ -168,9 +200,11 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 <script>
 /* ============================ music data ============================ */
 const OPEN=[4,9,2,7,11,4];                     // low E → high e, pitch classes
+const MIDI=[40,45,50,55,59,64];                // same strings, open, as MIDI numbers
 const NAMES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 const KEYS=["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
 const DEG=["1","b2","2","b3","3","4","b5","5","b6","6","b7","7"];
+const TRIAD=[0,4,7];                           // the chord itself: root, third, fifth
 
 // CAGED shapes: fret offsets per string (null = not played),
 // rs/ro = string index + fret offset where the shape's root sits.
@@ -189,12 +223,40 @@ const SCALES={
   "Mixolydian":[0,2,4,5,7,9,10],
   "Major":[0,2,4,5,7,9,11]
 };
+// Adjacent three-string sets, low string first.
+const SETS={"6-5-4":[0,1,2],"5-4-3":[1,2,3],"4-3-2":[2,3,4],"3-2-1":[3,4,5]};
+
+/* ============================ practice modes ============================ */
+/* A preset sets scope and layers together. Six independent toggles is sixty-four
+   states and most of them are not worth being in. */
+const PRESETS={
+  learn:   {name:"Learn the neck", scope:"all", emph:0, layers:{chords:1,scale:0,triads:0,ghosts:0}},
+  position:{name:"Position",       scope:"pos", emph:0, layers:{chords:1,scale:1,triads:0,ghosts:0}},
+  comping: {name:"Comping",        scope:"pos", emph:0, layers:{chords:0,scale:0,triads:1,ghosts:1}},
+  lead:    {name:"Lead",           scope:"pos", emph:1, layers:{chords:1,scale:1,triads:0,ghosts:0}}
+};
+const LAYERS=[["chords","Chord tones"],["scale","Scale"],["triads","Triads"],["ghosts","Ghosts"]];
 
 /* ============================ state ============================ */
-const S=load({key:9,shape:0,scale:"Major pent",bpm:84,beats:4,adv:0,zoom:1,labels:"deg",sound:true});
+const S=load({
+  key:9, shape:0, scale:"Major pent", bpm:84, beats:4, adv:0, labels:"deg", sound:true,
+  preset:"position", mod:false, scope:"pos", emph:0, set:"3-2-1",
+  layers:{chords:1,scale:1,triads:0,ghosts:0}
+});
 let seq=[];        // [{name, ref}] ordered up the neck for current key
 
-function load(d){try{return Object.assign(d,JSON.parse(localStorage.getItem("caged")||"{}"))}catch(e){return d}}
+function load(d){
+  try{
+    const raw=JSON.parse(localStorage.getItem("caged")||"{}");
+    const layers=Object.assign({},d.layers,raw.layers||{});
+    delete raw.layers; delete raw.zoom;         // zoom became scope
+    Object.assign(d,raw); d.layers=layers;
+    if(!PRESETS[d.preset]) d.preset="position";
+    if(!SETS[d.set]) d.set="3-2-1";
+    if(!SCALES[d.scale]) d.scale="Major pent";
+    return d;
+  }catch(e){ return d }
+}
 function save(){try{localStorage.setItem("caged",JSON.stringify(S))}catch(e){}}
 
 // Where each shape sits for a given key root.
@@ -206,6 +268,126 @@ function buildSeq(root){
   }).sort((a,b)=>a.ref-b.ref);
 }
 
+/* Scope is a separate axis from layers, and the two combinations that produce an
+   unreadable neck are simply not reachable: all five positions with a seven note
+   scale is ninety dots, and a triad needs one position to be a triad. */
+function enforceScope(){
+  if(S.scope==="all"){ S.layers.scale=0; S.layers.triads=0; }
+}
+function applyPreset(id){
+  const p=PRESETS[id];
+  S.preset=id; S.scope=p.scope; S.emph=p.emph;
+  S.layers=Object.assign({},p.layers);
+  enforceScope(); syncPreset(); refresh();
+}
+/* Changing a toggle leaves the preset selected and marks it modified rather than
+   silently deselecting it. Returning to the preset's own state clears the mark. */
+function syncPreset(){
+  const p=PRESETS[S.preset];
+  S.mod = !p || S.scope!==p.scope || S.emph!==p.emph ||
+    LAYERS.some(([k])=>!!S.layers[k]!==!!p.layers[k]);
+}
+
+/* ============================ the note model ============================ */
+/* One flat array of records for the visible window, built once. Three overlapping
+   layers cannot be drawn as three passes: a fret is frequently a member of all of
+   them, and layered passes overdraw each other. Membership first, appearance after. */
+function buildNotes(cur){
+  const sp=SHAPES[cur.name], ref=cur.ref, root=S.key, iv=SCALES[S.scale];
+  const all=S.scope==="all";
+  let lo=all?0:Math.max(0,ref-1), hi=all?NF:Math.min(NF,ref+4);
+
+  // Positions the current shape actually frets.
+  const grip={};
+  for(let s=0;s<6;s++){ if(sp.f[s]===null) continue; const fr=ref+sp.f[s]; if(fr<=NF) grip[s+":"+fr]=1; }
+
+  const tri=S.layers.triads?triadOn(cur):null;
+  if(tri&&!all) tri.notes.forEach(n=>{ if(n.f<lo) lo=n.f; if(n.f>hi) hi=n.f; });
+  const triKeys={};
+  if(tri) tri.notes.forEach(n=>{ triKeys[n.s+":"+n.f]=1; });
+  const onSet=SETS[S.set];
+
+  const recs=[];
+  for(let s=0;s<6;s++) for(let f=lo;f<=hi;f++){
+    const degree=((OPEN[s]+f)-root+120)%12;
+    const inScale=iv.indexOf(degree)>=0;
+    // Across the whole neck "chord tone" means the degree; inside one position it
+    // means this shape is holding it down.
+    const inChord=all?TRIAD.indexOf(degree)>=0:grip[s+":"+f]===1;
+    const inTriad=triKeys[s+":"+f]===1;
+    if(!inScale&&!inChord&&!inTriad) continue;
+    recs.push({
+      string:s, fret:f, degree:degree,
+      inChord:inChord, inScale:inScale, inTriad:inTriad,
+      isRoot:degree===0,
+      isTopNote:!!(tri&&tri.top.s===s&&tri.top.f===f),
+      onSet:onSet.indexOf(s)>=0
+    });
+  }
+  return {recs:recs, lo:lo, hi:hi, tri:tri};
+}
+
+/* Triads are CAGED seen through a three string window, so they are read off the
+   chord tones around the current shape rather than kept as a table of grips.
+   Pick one chord tone per string such that the three degrees are distinct, the
+   pitches ascend, and the voicing sits on the shape and stays compact. */
+function triadOn(cur){
+  const set=SETS[S.set], sp=SHAPES[cur.name], ref=cur.ref, root=S.key;
+  // One fret past the box: triad grips often sit just outside the CAGED window,
+  // and around the open shapes there is no complete voicing without it.
+  const lo=Math.max(0,ref-1), hi=Math.min(NF,ref+5);
+  const grip={};
+  for(let s=0;s<6;s++){ if(sp.f[s]!==null) grip[s+":"+(ref+sp.f[s])]=1; }
+
+  const cand=set.map(s=>{
+    const out=[];
+    for(let f=lo;f<=hi;f++){
+      const d=((OPEN[s]+f)-root+120)%12;
+      if(TRIAD.indexOf(d)>=0) out.push({s:s,f:f,d:d,midi:MIDI[s]+f,grip:grip[s+":"+f]?1:0});
+    }
+    return out;
+  });
+
+  let best=null;
+  cand[0].forEach(a=>cand[1].forEach(b=>cand[2].forEach(c=>{
+    if(!(a.midi<b.midi&&b.midi<c.midi)) return;          // a voicing, not a cluster
+    if(a.d===b.d||b.d===c.d||a.d===c.d) return;          // one root, one third, one fifth
+    const span=c.midi-a.midi;
+    const near=Math.abs(a.f-ref)+Math.abs(b.f-ref)+Math.abs(c.f-ref);
+    const score=(a.grip+b.grip+c.grip)*100-span*2-near;
+    if(!best||score>best.score) best={score:score,notes:[a,b,c]};
+  })));
+  if(!best) return null;
+
+  const n=best.notes, low=n[0], top=n[2];
+  // The inversion is whichever degree is lowest in pitch.
+  const inv=low.d===0?"root position":low.d===4?"1st inversion":"2nd inversion";
+  const short=low.d===0?"root pos":low.d===4?"1st inv":"2nd inv";
+  return {notes:n, low:low, top:top, inv:inv, short:short, topDeg:DEG[top.d]};
+}
+
+/* One treatment per note, chosen by precedence rather than by draw order.
+   A dot has three channels — fill, ring weight, opacity — and four layers do not
+   fit into three channels, so the ladder decides. Highest membership wins. */
+function styleNote(n,col){
+  const L=S.layers, tri=!!L.triads;
+  // With triads on, the neck outside the string set is context, not material.
+  const claimed=(!tri||n.onSet) &&
+    ((L.chords&&n.inChord)||(L.scale&&n.inScale)||(tri&&n.inTriad));
+  if(!claimed) return L.ghosts?{ghost:true}:null;
+  if(n.isRoot)                return {r:12, fill:col,       stroke:null, sw:0,              txt:"#12100E", op:1};
+  if(tri&&n.inTriad&&n.isTopNote)
+                              return {r:12, fill:"#241E1A", stroke:col,  sw:4.5,            txt:col,       op:1};
+  if(n.inChord||(tri&&n.inTriad))
+                              return {r:12, fill:"#241E1A", stroke:col,  sw:S.emph?3:2.5,   txt:col,       op:1};
+  return                             {r:11, fill:"#241E1A", stroke:"#5C5044", sw:1,         txt:"#948A7D", op:S.emph?.55:.85};
+}
+
+function labelFor(n){
+  if(S.labels==="none") return "";
+  return S.labels==="deg"?DEG[n.degree]:NAMES[(OPEN[n.string]+n.fret)%12];
+}
+
 /* ============================ neck drawing ============================ */
 const NX=64,FW=44,NF=15,TY=46,SS=30,VBW=NX+NF*FW+22,VBH=TY+5*SS+48;
 const fx=n=>n===0?NX-22:NX+(n-0.5)*FW;
@@ -213,25 +395,26 @@ const sy=i=>TY+(5-i)*SS;
 const svgEl=document.getElementById("neck");
 
 function drawNeck(){
-  const cur=seq[S.shape], sp=SHAPES[cur.name], ref=cur.ref, root=S.key;
-  const iv=SCALES[S.scale];
-  const lo=Math.max(0,ref-1), hi=Math.min(NF,ref+4);
-
+  const cur=seq[S.shape], sp=SHAPES[cur.name], ref=cur.ref;
+  const pos=S.scope==="pos";
   document.documentElement.style.setProperty("--shape",sp.col);
 
-  // chord tones actually fretted by this shape
-  const chord={};
-  for(let s=0;s<6;s++){ if(sp.f[s]===null) continue; const fr=ref+sp.f[s]; if(fr<=NF) chord[s+":"+fr]=1; }
+  const model=buildNotes(cur), tri=model.tri;
 
-  const winX = lo===0 ? NX-34 : NX+(lo-1)*FW;
-  const winR = NX+hi*FW;
-  const gut  = lo===0 ? -28 : winX-34;          // left gutter holds the string names
-  const vb = S.zoom ? [gut, 0, (winR-gut)+16, VBH] : [0,0,VBW,VBH];
-  const labX = S.zoom ? gut+14 : 14;
+  // The position box is drawn in both scopes: in all-five it is what tells you
+  // which box the metronome has moved you to.
+  const boxLo=Math.max(0,ref-1), boxHi=Math.min(NF,ref+4);
+  const winX = boxLo===0 ? NX-34 : NX+(boxLo-1)*FW;
+  const winR = NX+boxHi*FW;
+  const viewLo = pos?model.lo:0, viewHi = pos?model.hi:NF;
+  const vX = viewLo===0 ? NX-34 : NX+(viewLo-1)*FW;
+  const vR = NX+viewHi*FW;
+  const gut  = viewLo===0 ? -28 : vX-34;
+  const vb = pos ? [gut, 0, (vR-gut)+16, VBH] : [0,0,VBW,VBH];
+  const labX = pos ? gut+14 : 14;
 
   let g="";
-  // position shading
-  g+=`<rect x="${winX}" y="${TY-11}" width="${winR-winX}" height="${5*SS+22}" rx="10" fill="${sp.col}" opacity="${S.zoom?.06:.09}"/>`;
+  g+=`<rect x="${winX}" y="${TY-11}" width="${winR-winX}" height="${5*SS+22}" rx="10" fill="${sp.col}" opacity="${pos?.06:.09}"/>`;
   // frets
   for(let f=0;f<=NF;f++){
     const x=NX+f*FW;
@@ -241,12 +424,17 @@ function drawNeck(){
   for(let i=0;i<6;i++){
     g+=`<line x1="${NX}" y1="${sy(i)}" x2="${NX+NF*FW}" y2="${sy(i)}" stroke="#5C5044" stroke-width="${1.6-i*0.14}"/>`;
   }
+  // the three string set, when triads are on
+  if(tri){
+    const set=SETS[S.set];
+    g+=`<rect x="${pos?vX:NX-34}" y="${sy(set[2])-13}" width="${(pos?vR:NX+NF*FW)-(pos?vX:NX-34)}" height="${sy(set[0])-sy(set[2])+26}" rx="12" fill="none" stroke="${sp.col}" stroke-opacity=".3" stroke-width="1.5"/>`;
+  }
   // inlays
   [3,5,7,9,15].forEach(f=>{ if(f<=NF) g+=`<circle cx="${NX+(f-.5)*FW}" cy="${TY+2.5*SS}" r="4.5" fill="#3E342C"/>`; });
   g+=`<circle cx="${NX+11.5*FW}" cy="${TY+1.5*SS}" r="4.5" fill="#3E342C"/><circle cx="${NX+11.5*FW}" cy="${TY+3.5*SS}" r="4.5" fill="#3E342C"/>`;
   // fret numbers + string names
   for(let f=0;f<=NF;f++){
-    if(S.zoom && (f<lo||f>hi)) continue;
+    if(pos && (f<viewLo||f>viewHi)) continue;
     g+=`<text class="mark-txt" x="${f===0?NX-22:NX+(f-.5)*FW}" y="${TY+5*SS+26}" text-anchor="middle">${f}</text>`;
   }
   ["E","A","D","G","B","e"].forEach((n,i)=>{
@@ -263,56 +451,120 @@ function drawNeck(){
     g+=`<rect x="${fx(ref)-9}" y="${y1-9}" width="18" height="${y2-y1+18}" rx="9" fill="${sp.col}" opacity=".22"/>`;
   }
   // notes
-  for(let s=0;s<6;s++) for(let f=lo;f<=hi;f++){
-    const d=((OPEN[s]+f)-root+120)%12;
-    const isC=chord[s+":"+f]===1;
-    if(iv.indexOf(d)<0 && !isC) continue;
-    const x=fx(f),y=sy(s),isR=d===0;
-    const txt = S.labels==="deg" ? DEG[d] : NAMES[(OPEN[s]+f)%12];
-    if(isR){
-      g+=`<circle cx="${x}" cy="${y}" r="12" fill="${sp.col}"/>`;
-      g+=`<text class="dot-txt" x="${x}" y="${y+4}" text-anchor="middle" fill="#12100E">${txt}</text>`;
-    }else if(isC){
-      g+=`<circle cx="${x}" cy="${y}" r="12" fill="#241E1A" stroke="${sp.col}" stroke-width="2.5"/>`;
-      g+=`<text class="dot-txt" x="${x}" y="${y+4}" text-anchor="middle" fill="${sp.col}">${txt}</text>`;
-    }else{
-      g+=`<circle cx="${x}" cy="${y}" r="11" fill="#241E1A" stroke="#5C5044" stroke-width="1"/>`;
-      g+=`<text class="dot-txt" x="${x}" y="${y+4}" text-anchor="middle" fill="#948A7D">${txt}</text>`;
+  model.recs.forEach(n=>{
+    const st=styleNote(n,sp.col);
+    if(!st) return;
+    const x=fx(n.fret),y=sy(n.string);
+    if(st.ghost){
+      g+=`<circle cx="${x}" cy="${y}" r="11" fill="none" stroke="#5C5044" stroke-width="1" opacity=".15"/>`;
+      return;
     }
+    g+=`<g opacity="${st.op}">`;
+    g+=`<circle cx="${x}" cy="${y}" r="${st.r}" fill="${st.fill}"${st.stroke?` stroke="${st.stroke}" stroke-width="${st.sw}"`:""}/>`;
+    const t=labelFor(n);
+    if(t) g+=`<text class="dot-txt" x="${x}" y="${y+4}" text-anchor="middle" fill="${st.txt}">${t}</text>`;
+    g+=`</g>`;
+  });
+  // The top note is the one you pick a voicing by, so it is marked above the dot
+  // as well as by its ring. Precedence gives the root a solid fill, which would
+  // otherwise hide the fact that the root is the note on top.
+  if(tri){
+    const x=fx(tri.top.f),y=sy(tri.top.s);
+    g+=`<path d="M${x-6} ${y-15} L${x} ${y-20} L${x+6} ${y-15}" fill="none" stroke="${sp.col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
   }
-  // shape name over the neck
-  const capX=Math.max(vb[0]+54, fx(ref===0?0:ref));
-  g+=`<text class="shape-txt" x="${capX}" y="${TY-20}" text-anchor="middle" fill="${sp.col}">${cur.name} shape</text>`;
+  // headings above the neck
+  g+=`<text class="shape-txt" x="${vb[0]+16}" y="${TY-27}" text-anchor="start" fill="${sp.col}">${cur.name} shape${ref===0?" · open":" · fret "+ref}</text>`;
+  if(tri) g+=`<text class="voice-txt" x="${vb[0]+vb[2]-16}" y="${TY-27}" text-anchor="end" fill="${sp.col}">${tri.short} · ${tri.topDeg} on top</text>`;
 
   svgEl.setAttribute("preserveAspectRatio","xMidYMid meet");
   svgEl.setAttribute("viewBox",vb.join(" "));
+  svgEl.setAttribute("aria-label",
+    `${KEYS[S.key]} major, ${cur.name} shape${ref===0?" at the nut":" at fret "+ref}`+
+    (tri?`, triad on strings ${S.set}, ${tri.inv}, ${tri.topDeg} on top`:""));
   svgEl.innerHTML=g;
 
+  drawLegend(cur,tri);
+}
+
+function drawLegend(cur,tri){
+  const L=S.layers;
+  let txt=`<b>${KEYS[S.key]} major</b> · `;
+  txt+= S.scope==="all"
+    ? `chord tones across the whole neck, <b>${cur.name} shape</b> boxed`
+    : `<b>${cur.name} shape</b>${cur.ref===0?" at the nut":`, index finger at fret ${cur.ref}`}`;
+  if(tri) txt+=` · triad on <b>${S.set}</b>: <b>${tri.inv}</b>, <b>${tri.topDeg}</b> on top`;
+  else if(L.scale) txt+=` · <b>${S.scale.toLowerCase()}</b>`;
+  const live=L.chords||L.scale||tri;
+  const key=[];
+  if(live) key.push("filled dot is the root");
+  if(tri) key.push("thick ring is the top note");
+  if(L.chords||tri) key.push("ring is a chord tone");
+  if(L.scale) key.push("thin ring is the rest of the scale");
+  if(live&&L.ghosts) key.push("faint ring is out of play");
   document.getElementById("legend").innerHTML=
-    `<b>${KEYS[S.key]} ${S.scale.toLowerCase()}</b> around the <b>${cur.name} shape</b>`+
-    (ref===0?" at the nut":` — index finger at fret ${ref}`)+
-    `. Filled dot is the root. Thick ring is a chord tone you're already fretting. Thin ring is the rest of the scale.`;
+    txt+(key.length?". "+key.join(", ")+"."
+      :". Every layer is off. Nothing is claiming a note.");
 }
 
 /* ============================ chips ============================ */
-function chip(text,on,cb,el){
+function chip(text,on,cb,el,extra){
   const b=document.createElement("button");
   b.textContent=text; b.onclick=cb;
+  b.setAttribute("aria-pressed",on?"true":"false");
   if(on) b.classList.add("on");
+  if(extra) b.classList.add(extra);
   el.appendChild(b); return b;
 }
 function renderChips(){
+  const pc=document.getElementById("presets"); pc.innerHTML="";
+  Object.keys(PRESETS).forEach(id=>{
+    const on=id===S.preset;
+    chip(PRESETS[id].name,on,()=>applyPreset(id),pc,on&&S.mod?"mod":null);
+  });
+
   const kc=document.getElementById("keys"); kc.innerHTML="";
   KEYS.forEach((k,i)=>chip(k,i===S.key,()=>{S.key=i;seq=buildSeq(S.key);S.shape=0;refresh()},kc));
+
   const sc=document.getElementById("shapes"); sc.innerHTML="";
   seq.forEach((s,i)=>chip(s.name+(s.ref===0?" (open)":" · "+s.ref),i===S.shape,()=>{S.shape=i;refresh()},sc));
+
   const vc=document.getElementById("scales"); vc.innerHTML="";
   Object.keys(SCALES).forEach(n=>chip(n,n===S.scale,()=>{S.scale=n;refresh()},vc));
+
+  const lc=document.getElementById("layers"); lc.innerHTML="";
+  LAYERS.forEach(([k,name])=>{
+    const b=chip(name,!!S.layers[k],()=>{
+      S.layers[k]=S.layers[k]?0:1;
+      if(k==="triads"&&S.layers[k]&&S.scope==="all") S.scope="pos";   // a triad needs a position
+      syncPreset(); refresh();
+    },lc);
+    // Scale and triads are unreachable across all five positions, by design.
+    if(S.scope==="all"&&(k==="scale"||k==="triads")) b.setAttribute("aria-disabled","true");
+  });
+
+  const stc=document.getElementById("sets"); stc.innerHTML="";
+  Object.keys(SETS).forEach(n=>{
+    const b=document.createElement("button");
+    b.textContent=n; b.setAttribute("aria-pressed",n===S.set?"true":"false");
+    if(n===S.set) b.classList.add("on");
+    b.onclick=()=>{S.set=n;refresh()};
+    stc.appendChild(b);
+  });
+
+  document.getElementById("setrow").classList.toggle("hide",!S.layers.triads);
+  document.getElementById("scalerow").classList.toggle("hide",!S.layers.scale);
+  document.getElementById("hint").textContent = S.scope==="all"
+    ? "Across all five positions the neck only shows chord tones. A seven note scale over the whole neck is ninety dots, and a triad needs a single position."
+    : "";
 }
 function segSync(id,attr,val){
-  document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.toggle("on",b.dataset[attr]==String(val)));
+  document.querySelectorAll("#"+id+" button").forEach(b=>{
+    const on=b.dataset[attr]==String(val);
+    b.classList.toggle("on",on);
+    b.setAttribute("aria-pressed",on?"true":"false");
+  });
 }
-function refresh(){ renderChips(); drawNeck(); save(); }
+function refresh(){ enforceScope(); renderChips(); segSync("scope","s",S.scope); segSync("labs","l",S.labels); drawNeck(); save(); }
 
 /* ============================ metronome ============================ */
 let ctx=null,playing=false,nextTime=0,beat=0,bar=0,timer=null,queue=[];
@@ -419,13 +671,13 @@ document.getElementById("adv").onclick=e=>{
   if(e.target.dataset.a===undefined) return;
   S.adv=+e.target.dataset.a; segSync("adv","a",S.adv); save();
 };
-document.getElementById("zoom").onclick=e=>{
-  if(e.target.dataset.z===undefined) return;
-  S.zoom=+e.target.dataset.z; segSync("zoom","z",S.zoom); drawNeck(); save();
+document.getElementById("scope").onclick=e=>{
+  if(!e.target.dataset.s) return;
+  S.scope=e.target.dataset.s; syncPreset(); refresh();
 };
 document.getElementById("labs").onclick=e=>{
   if(!e.target.dataset.l) return;
-  S.labels=e.target.dataset.l; segSync("labs","l",S.labels); drawNeck(); save();
+  S.labels=e.target.dataset.l; refresh();
 };
 document.getElementById("sound").onclick=e=>{
   S.sound=!S.sound;
@@ -433,6 +685,13 @@ document.getElementById("sound").onclick=e=>{
   e.target.textContent=S.sound?"Click on":"Click off";
   save();
 };
+document.getElementById("gear").onclick=e=>{
+  const panel=document.getElementById("settings");
+  const open=panel.classList.toggle("hide")===false;
+  e.target.setAttribute("aria-expanded",open?"true":"false");
+  e.target.classList.toggle("on",open);
+};
+const PRESET_KEYS=Object.keys(PRESETS);
 document.addEventListener("keydown",e=>{
   if(e.target.tagName==="INPUT") return;
   if(e.code==="Space"){ e.preventDefault(); playing?stop():start(); }
@@ -440,15 +699,20 @@ document.addEventListener("keydown",e=>{
   if(e.key==="ArrowDown") setBpm(S.bpm-1);
   if(e.key==="ArrowRight"){ S.shape=(S.shape+1)%seq.length; refresh(); }
   if(e.key==="ArrowLeft"){ S.shape=(S.shape+seq.length-1)%seq.length; refresh(); }
+  if(e.key>="1"&&e.key<="4") applyPreset(PRESET_KEYS[+e.key-1]);
+  if(e.key==="l"||e.key==="L"){
+    const order=["deg","note","none"];
+    S.labels=order[(order.indexOf(S.labels)+1)%3]; refresh();
+  }
 });
 
 /* boot */
 seq=buildSeq(S.key);
 setBpm(S.bpm);
 segSync("beats","b",S.beats); segSync("adv","a",S.adv);
-segSync("zoom","z",S.zoom); segSync("labs","l",S.labels);
 document.getElementById("sound").classList.toggle("on",S.sound);
 document.getElementById("sound").textContent=S.sound?"Click on":"Click off";
+syncPreset();
 refresh();
 buildPips();
 frame();
