@@ -32,7 +32,9 @@ export function useMetronome({ bpm, beats, click, volume, advanceBars, onAdvance
 
   // Latest values, so changing tempo mid-bar does not tear down the scheduler.
   const options = useRef({ bpm, beats, click, volume, advanceBars, onAdvance });
-  options.current = { bpm, beats, click, volume, advanceBars, onAdvance };
+  useEffect(() => {
+    options.current = { bpm, beats, click, volume, advanceBars, onAdvance };
+  });
 
   const queue = useRef<ScheduledEvent[]>([]);
   const nextNoteTime = useRef(0);

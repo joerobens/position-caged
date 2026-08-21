@@ -1,34 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from "@/lib/settings";
+import { useCallback, useSyncExternalStore } from "react";
+import { getServerSnapshot, getSnapshot, subscribe, updateSettings } from "@/lib/settingsStore";
+import type { Settings } from "@/lib/settings";
 
-/**
- * Settings live in localStorage but must not be read during render, or the server
- * markup and the first client render disagree. We start from the defaults and swap
- * in the stored values once mounted.
- */
+const alwaysTrue = () => true;
+const alwaysFalse = () => false;
+
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [hydrated, setHydrated] = useState(false);
-  const firstRun = useRef(true);
+  const settings = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // False during the hydration render, true from the first client render onward.
+  const hydrated = useSyncExternalStore(subscribe, alwaysTrue, alwaysFalse);
 
-  useEffect(() => {
-    setSettings(loadSettings());
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false;
-      return;
-    }
-    if (hydrated) saveSettings(settings);
-  }, [settings, hydrated]);
-
-  const update = useCallback((patch: Partial<Settings> | ((current: Settings) => Partial<Settings>)) => {
-    setSettings((current) => ({ ...current, ...(typeof patch === "function" ? patch(current) : patch) }));
-  }, []);
+  const update = useCallback(
+    (patch: Partial<Settings> | ((current: Settings) => Partial<Settings>)) => updateSettings(patch),
+    [],
+  );
 
   return { settings, update, hydrated };
 }
