@@ -228,24 +228,28 @@ export default function Page() {
 
   return (
     <main
-      className="mx-auto flex min-h-[100dvh] w-full max-w-[1400px] flex-col gap-3 px-[max(14px,env(safe-area-inset-left))] pb-[max(14px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))]"
+      className="mx-auto flex min-h-[100dvh] w-full max-w-[1400px] flex-col gap-2 px-[var(--gutter)] pb-[max(14px,env(safe-area-inset-bottom))] sm:gap-3"
       style={{ visibility: hydrated ? "visible" : "hidden" }}
     >
-      <header className="flex h-11 flex-none items-center justify-between gap-4">
-        <h1 className="text-base font-medium tracking-tight">Position</h1>
-        <p className="truncate font-mono text-xs text-bone-dim">
-          {view.spiderDrawn
-            ? `spider walk · ${settings.spiderPattern}`
-            : `${keyLabel(settings.root, settings.tonality)}${view.scaleDrawn ? ` ${settings.scale.toLowerCase()}` : ""} · ${
-                view.allShapes
-                  ? `all five shapes, ${position.name} highlighted`
-                  : `${position.name} shape${position.fret === 0 ? " at the nut" : ` at fret ${position.fret}`}`
-              }`}
-        </p>
-      </header>
-
-      {/* the neck, in both modes, always */}
-      <div className="overflow-hidden rounded-2xl border border-board-edge bg-board px-1 py-1.5 [&_svg]:max-h-[42vh]">
+      {/*
+        The neck stays put and everything else scrolls behind it. The block bleeds
+        out through the page gutter so nothing shows past its edges on the way past.
+      */}
+      <div className="sticky top-0 z-20 -mx-[var(--gutter)] flex flex-col gap-2 bg-ink px-[var(--gutter)] pb-2 pt-[max(8px,env(safe-area-inset-top))]">
+        {/* On a phone the neck names the shape itself, so this row is a desktop luxury. */}
+        <header className="hidden h-11 flex-none items-center justify-between gap-4 sm:flex">
+          <h1 className="text-base font-medium tracking-tight">Position</h1>
+          <p className="truncate font-mono text-xs text-bone-dim">
+            {view.spiderDrawn
+              ? `spider walk · ${settings.spiderPattern}`
+              : `${keyLabel(settings.root, settings.tonality)}${view.scaleDrawn ? ` ${settings.scale.toLowerCase()}` : ""} · ${
+                  view.allShapes
+                    ? `all five shapes, ${position.name} highlighted`
+                    : `${position.name} shape${position.fret === 0 ? " at the nut" : ` at fret ${position.fret}`}`
+                }`}
+          </p>
+        </header>
+        <div className="neck-frame">
         <Fretboard
           position={position}
           positions={positions}
@@ -258,8 +262,9 @@ export default function Page() {
           allShapes={view.allShapes}
           showScale={view.scaleDrawn}
           spider={spider}
-          onPlayNote={playNote}
-        />
+            onPlayNote={playNote}
+          />
+        </div>
       </div>
 
       <KeyBar
@@ -305,7 +310,7 @@ export default function Page() {
                 options={KEYS.map((name, index) => ({ value: index, label: name }))}
               />
             </Field>
-            <div className="flex flex-wrap gap-4">
+            <div className="field-row">
               <Field label="Tonality" info={INFO.tonality}>
                 <Segmented
                   ariaLabel="Tonality"

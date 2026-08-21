@@ -23,6 +23,8 @@
  */
 :root {
   --accent: #4fc7a1;
+  /* One gutter value, so the sticky neck can bleed out to the screen edges. */
+  --gutter: max(14px, env(safe-area-inset-left), env(safe-area-inset-right));
 }
 
 html,
@@ -100,7 +102,71 @@ body {
   }
 
   .panel {
-    @apply rounded-2xl border border-line bg-panel p-4;
+    @apply rounded-2xl border border-line bg-panel p-3 sm:p-4;
+  }
+
+  /*
+   * A phone cannot wrap twelve keys without eating half the screen, so chip rows
+   * are one swipeable line there and wrap normally from sm up.
+   */
+  .chip-row {
+    @apply flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-x-visible sm:pb-0;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Same trick for a row of small segmented controls. */
+  .field-row {
+    @apply flex gap-4 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-x-visible sm:pb-0;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .field-row::-webkit-scrollbar {
+    display: none;
+  }
+  .field-row > * {
+    flex: none;
+  }
+  .chip-row > * {
+    flex: none;
+  }
+}
+
+/*
+ * The neck. Sticky, so it never scrolls away from you, and sized to leave room
+ * for the controls underneath at each device size.
+ */
+.neck-frame {
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--color-board-edge);
+  background: var(--color-board);
+  padding: 6px 4px;
+}
+.neck-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 34vh;
+}
+@media (min-width: 640px) {
+  .neck-frame svg {
+    max-height: 40vh;
+  }
+}
+@media (min-width: 1024px) {
+  .neck-frame svg {
+    max-height: 46vh;
+  }
+}
+/* A phone on its side has almost no height to give away. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .neck-frame svg {
+    max-height: 58vh;
   }
 }
 

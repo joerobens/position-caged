@@ -124,8 +124,27 @@ export function ChipGroup<T extends string | number>({
   onChange: (value: T) => void;
   ariaLabel: string;
 }) {
+  const row = useRef<HTMLDivElement>(null);
+
+  // On a phone the row scrolls, so the selection can end up off screen. Bring it
+  // back by moving the row itself, never by calling scrollIntoView, which would
+  // drag the whole page around with it.
+  useEffect(() => {
+    const container = row.current;
+    const selected = container?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!container || !selected) return;
+    const bounds = container.getBoundingClientRect();
+    const chip = selected.getBoundingClientRect();
+    if (chip.left >= bounds.left && chip.right <= bounds.right) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    container.scrollTo({
+      left: container.scrollLeft + (chip.left - bounds.left) - 16,
+      behavior: reduced ? "auto" : "smooth",
+    });
+  }, [value]);
+
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label={ariaLabel}>
+    <div ref={row} className="chip-row" role="group" aria-label={ariaLabel}>
       {options.map((option) => (
         <button
           key={String(option.value)}
