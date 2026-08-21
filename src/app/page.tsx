@@ -9,6 +9,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { getAudioEngine } from "@/lib/audio";
 import { KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
 import { scaleForTonality, type AdvanceMode, type Settings } from "@/lib/settings";
+import { deriveView } from "@/lib/view";
 
 type Tab = "shape" | "drill" | "sound";
 
@@ -68,6 +69,7 @@ export default function Page() {
   const position = positions[Math.min(settings.positionIndex, positions.length - 1)];
   const pairPosition = settings.advanceMode === "pair" ? positions[Math.min(settings.pairIndex, positions.length - 1)] : null;
   const intervals = SCALES[settings.tonality][settings.scale] ?? Object.values(SCALES[settings.tonality])[0];
+  const view = deriveView(settings);
 
   // The accent follows the shape, so the whole interface tells you where you are.
   useEffect(() => {
@@ -190,8 +192,8 @@ export default function Page() {
         <h1 className="text-base font-medium tracking-tight">Position</h1>
         <p className="truncate font-mono text-xs text-bone-dim">
           {keyLabel(settings.root, settings.tonality)}
-          {settings.showScale && !settings.allShapes ? ` ${settings.scale.toLowerCase()}` : ""} ·{" "}
-          {settings.allShapes
+          {view.scaleDrawn ? ` ${settings.scale.toLowerCase()}` : ""} ·{" "}
+          {view.allShapes
             ? `all five shapes, ${position.name} highlighted`
             : `${position.name} shape${position.fret === 0 ? " at the nut" : ` at fret ${position.fret}`}`}
         </p>
@@ -201,14 +203,14 @@ export default function Page() {
         <Fretboard
           position={position}
           positions={positions}
-          pair={settings.allShapes ? null : pairPosition}
+          pair={view.pairDrawn ? pairPosition : null}
           root={settings.root}
           tonality={settings.tonality}
           intervals={intervals}
-          zoom={settings.allShapes ? "neck" : settings.zoom}
+          zoom={view.zoom}
           labels={settings.labels}
-          allShapes={settings.allShapes}
-          showScale={settings.showScale}
+          allShapes={view.allShapes}
+          showScale={view.scaleDrawn}
           onPlayNote={playNote}
         />
       </div>
@@ -266,19 +268,19 @@ export default function Page() {
                 ]}
               />
             </Field>
-            <Field label="View" info={INFO.view}>
-              <div className={settings.allShapes ? "pointer-events-none opacity-40" : undefined}>
+            {view.zoomAvailable ? (
+              <Field label="View" info={INFO.view}>
                 <Segmented
                   ariaLabel="View"
-                  value={settings.allShapes ? "neck" : settings.zoom}
+                  value={settings.zoom}
                   onChange={(zoom) => update({ zoom })}
                   options={[
                     { value: "position", label: "Position" },
                     { value: "neck", label: "Whole neck" },
                   ]}
                 />
-              </div>
-            </Field>
+              </Field>
+            ) : null}
             <Field label="Labels" info={INFO.labels}>
               <Segmented
                 ariaLabel="Labels"
@@ -299,33 +301,40 @@ export default function Page() {
               options={shapeChoices}
             />
           </Field>
-          <Field
-            label="Scale"
-            info={INFO.scale}
-            action={
-              <button
-                type="button"
-                className="chip chip-sm"
-                aria-pressed={settings.showScale}
-                onClick={() => update({ showScale: !settings.showScale })}
-              >
-                {settings.showScale ? "Shown" : "Hidden"}
-              </button>
-            }
-          >
-            {settings.showScale ? (
-              <ChipGroup
-                ariaLabel="Scale"
-                value={settings.scale}
-                onChange={(scale) => update({ scale })}
-                options={Object.keys(SCALES[settings.tonality]).map((name) => ({ value: name, label: name }))}
-              />
-            ) : (
-              <p className="text-xs leading-relaxed text-bone-dim">
-                Chord tones only. {settings.allShapes ? "" : "Nothing but the notes the shape is holding down."}
-              </p>
-            )}
-          </Field>
+          {view.scaleAvailable ? (
+            <Field
+              label="Scale"
+              info={INFO.scale}
+              action={
+                <button
+                  type="button"
+                  className="chip chip-sm"
+                  aria-pressed={settings.showScale}
+                  onClick={() => update({ showScale: !settings.showScale })}
+                >
+                  {settings.showScale ? "Shown" : "Hidden"}
+                </button>
+              }
+            >
+              {settings.showScale ? (
+                <ChipGroup
+                  ariaLabel="Scale"
+                  value={settings.scale}
+                  onChange={(scale) => update({ scale })}
+                  options={Object.keys(SCALES[settings.tonality]).map((name) => ({ value: name, label: name }))}
+                />
+              ) : (
+                <p className="text-[13px] leading-relaxed text-bone-dim">
+                  Chord tones only: the notes the shape is holding down, and nothing else.
+                </p>
+              )}
+            </Field>
+          ) : null}
+          {view.note ? (
+            <p className="rounded-xl border border-line bg-ink/40 p-3 text-[13px] leading-relaxed text-bone-dim">
+              {view.note}
+            </p>
+          ) : null}
         </section>
 
         {/* Drill */}
@@ -384,11 +393,11 @@ export default function Page() {
               />
             </Field>
           ) : null}
-          <p className="text-xs leading-relaxed text-bone-dim">
+          <p className="text-[13px] leading-relaxed text-bone-dim">
             {settings.advanceBars === 0
               ? "Shapes stay put. Turn this on to be moved between positions in time."
               : settings.advanceMode === "pair"
-                ? `Sliding between the ${position.name} and ${pairPosition?.name} shapes every ${settings.advanceBars} ${settings.advanceBars === 1 ? "bar" : "bars"}. The dashed box is where you are going next.`
+                ? `Sliding between the ${position.name} and ${pairPosition?.name} shapes every ${settings.advanceBars} ${settings.advanceBars === 1 ? "bar" : "bars"}. ${view.pairDrawn ? "The dashed box is where you are going next." : "The highlight moves between the two."}`
                 : `Moving ${settings.advanceMode === "random" ? "to a random shape" : settings.advanceMode === "down" ? "down the neck" : "up the neck"} every ${settings.advanceBars} ${settings.advanceBars === 1 ? "bar" : "bars"}.`}
           </p>
         </section>
@@ -440,15 +449,15 @@ export default function Page() {
             onChange={(value) => update({ droneVolume: value / 100 })}
             display={`${Math.round(settings.droneVolume * 100)}%`}
           />
-          <p className="text-xs leading-relaxed text-bone-dim">
+          <p className="text-[13px] leading-relaxed text-bone-dim">
             The drone holds the key centre under whatever you play, which is the quickest way to hear what each degree
             actually does. Tap any note on the neck to hear it against the drone.
           </p>
         </section>
       </div>
 
-      <p className="text-xs leading-relaxed text-bone-dim">
-        {settings.allShapes ? (
+      <p className="text-[13px] leading-relaxed text-bone-dim">
+        {view.allShapes ? (
           <>
             <b className="font-medium text-bone">
               {keyLabel(settings.root, settings.tonality)} chord tones across the whole neck
@@ -461,12 +470,12 @@ export default function Page() {
           <>
             <b className="font-medium text-bone">
               {keyLabel(settings.root, settings.tonality)}
-              {settings.showScale ? ` ${settings.scale.toLowerCase()}` : " chord tones"}
+              {view.scaleDrawn ? ` ${settings.scale.toLowerCase()}` : " chord tones"}
             </b>{" "}
             around the <b className="font-medium text-bone">{position.name} shape</b>
             {position.fret === 0 ? " at the nut" : `, index finger at fret ${position.fret}`}. Filled dot is the root,
             thick ring is a chord tone you are already fretting
-            {settings.showScale ? ", thin ring is the rest of the scale" : ""}. Space starts the metronome, arrows
+            {view.scaleDrawn ? ", thin ring is the rest of the scale" : ""}. Space starts the metronome, arrows
             change tempo and position.
           </>
         )}

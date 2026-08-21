@@ -332,7 +332,7 @@ function Fretboard({
               </>
             ) : (
               <>
-                <circle cx={note.x} cy={note.y} r={11} fill="#241E1A" stroke="#5C5044" strokeWidth={1} />
+                <circle cx={note.x} cy={note.y} r={11} fill="#241E1A" stroke="#7A6B5C" strokeWidth={1} />
                 <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill="#948A7D">
                   {note.text}
                 </text>
@@ -355,7 +355,7 @@ function Fretboard({
           >
             <circle cx={note.x} cy={note.y} r={15} fill="transparent" />
             {!owned ? (
-              <circle cx={note.x} cy={note.y} r={11} fill="#241E1A" stroke="#5C5044" strokeWidth={1} />
+              <circle cx={note.x} cy={note.y} r={11} fill="#241E1A" stroke="#7A6B5C" strokeWidth={1} />
             ) : note.isRoot ? (
               // One owner is a plain disc: a wedge spanning the full 360 has identical
               // endpoints, and SVG draws nothing at all for a zero length arc.

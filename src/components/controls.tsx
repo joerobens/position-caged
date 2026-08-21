@@ -41,7 +41,7 @@ export function Info({ text }: { text: string }) {
         aria-expanded={open}
         aria-describedby={open ? id : undefined}
         onClick={() => setOpen((current) => !current)}
-        className="flex size-5 items-center justify-center rounded-full text-bone-dim transition-colors hover:text-bone focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone"
+        className="relative flex size-5 items-center justify-center rounded-full text-bone-dim transition-colors before:absolute before:-inset-3 before:content-[''] hover:text-bone focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone"
       >
         <InfoIcon size={15} weight="bold" />
       </button>
@@ -49,7 +49,7 @@ export function Info({ text }: { text: string }) {
         <span
           id={id}
           role="tooltip"
-          className="absolute left-1/2 top-7 z-30 w-[min(280px,calc(100vw-40px))] -translate-x-1/2 rounded-xl border border-line bg-panel p-3 text-xs leading-relaxed font-normal normal-case tracking-normal text-bone shadow-lg shadow-black/40"
+          className="absolute left-1/2 top-8 z-30 w-[min(290px,calc(100vw-40px))] -translate-x-1/2 rounded-xl border border-line bg-panel p-3 text-[13px] leading-relaxed font-normal normal-case tracking-normal text-bone shadow-lg shadow-black/40"
         >
           {text}
         </span>
