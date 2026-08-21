@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import Fretboard from "@/components/Fretboard";
 import KeyBar from "@/components/KeyBar";
+import CycleStrip from "@/components/CycleStrip";
 import Transport, { MAX_BPM, MIN_BPM } from "@/components/Transport";
 import { ChipGroup, Field, Segmented, Slider, Toggle } from "@/components/controls";
 import { useMetronome } from "@/hooks/useMetronome";
@@ -25,9 +26,9 @@ const INFO = {
   tonality:
     "Major or minor. The five shapes keep the same geometry in minor: the thirds drop a semitone and the scale choices change with them.",
   view: "Position zooms to the shape you are on. Whole neck keeps the same notes but shows where the box sits on the full neck.",
-  labels: "What goes inside each dot. Degrees are the interval from the root, which is what transfers between keys. Notes are the note names.",
+  labels: "What goes inside each dot. Degrees are the interval from the root, which is what transfers between keys; notes are the note names. None is the useful one: with the numbers gone you find out whether you know the shape or have been reading it.",
   shape:
-    "The five CAGED shapes, ordered up the neck and named for the open chord each one comes from. All shows every shape at once, each in its own colour, so you can see how they interlock and where they share notes.",
+    "The five CAGED shapes, ordered up the neck and named for the open chord each one comes from. All shows every shape at once, each in its own colour. Roots strips it back to the root notes and the octave links between them, which is the map underneath everything else.",
   scale:
     "The scale drawn around the shape. Turn it off to leave just the chord tones, which is how you check you actually know where the 1, 3 and 5 are rather than running a pattern.",
   drill: "What the clock is drilling. The shape drills move you around the neck; the spider walk is a finger exercise and takes the neck over while it runs.",
@@ -156,6 +157,7 @@ export default function Page() {
       update((current) => ({
         positionIndex: (current.positionIndex + direction + positions.length) % positions.length,
         allShapes: false,
+        rootMap: false,
       })),
     [update, positions.length],
   );
@@ -204,9 +206,9 @@ export default function Page() {
     (index: number) =>
       update((current) => {
         if (current.drill === "slide" && index === current.pairIndex) {
-          return { positionIndex: index, pairIndex: current.positionIndex, allShapes: false };
+          return { positionIndex: index, pairIndex: current.positionIndex, allShapes: false, rootMap: false };
         }
-        return { positionIndex: index, allShapes: false };
+        return { positionIndex: index, allShapes: false, rootMap: false };
       }),
     [update],
   );
@@ -220,8 +222,10 @@ export default function Page() {
   }));
   const shapeChoices = [
     { value: "all", label: "All", title: "Every shape at once, colour coded, across the whole neck" },
+    { value: "roots", label: "Roots", title: "Every root on the neck, joined by its octave links" },
     ...shapeOptions.map((option) => ({ ...option, value: String(option.value) })),
   ];
+  const shapeChoice = view.rootMap ? "roots" : settings.allShapes ? "all" : String(settings.positionIndex);
 
   const drill = DRILLS.find((entry) => entry.id === settings.drill) ?? DRILLS[0];
   const learning = settings.mode === "learn";
@@ -260,6 +264,7 @@ export default function Page() {
           zoom={view.zoom}
           labels={settings.labels}
           allShapes={view.allShapes}
+          rootMap={view.rootMap}
           showScale={view.scaleDrawn}
           spider={spider}
             onPlayNote={playNote}
@@ -350,6 +355,7 @@ export default function Page() {
                   options={[
                     { value: "degrees", label: "Degrees" },
                     { value: "notes", label: "Notes" },
+                    { value: "none", label: "None" },
                   ]}
                 />
               </Field>
@@ -360,10 +366,17 @@ export default function Page() {
             <Field label="Shape" info={INFO.shape}>
               <ChipGroup
                 ariaLabel="Shape"
-                value={settings.allShapes ? "all" : String(settings.positionIndex)}
-                onChange={(value) => (value === "all" ? update({ allShapes: true }) : selectPosition(Number(value)))}
+                value={shapeChoice}
+                onChange={(value) =>
+                  value === "all"
+                    ? update({ allShapes: true, rootMap: false })
+                    : value === "roots"
+                      ? update({ rootMap: true, allShapes: false })
+                      : selectPosition(Number(value))
+                }
                 options={shapeChoices}
               />
+              <CycleStrip positions={positions} current={position.name} />
             </Field>
             {view.scaleAvailable ? (
               <Field
@@ -539,6 +552,13 @@ export default function Page() {
             <b className="font-medium text-bone">Spider walk, {settings.spiderPattern}</b>, one note per beat. The
             filled dot is the note due now and the ringed one is next; the numbers are fingers, not frets. Space starts
             and stops, arrows change tempo. L and P switch modes.
+          </>
+        ) : view.rootMap ? (
+          <>
+            <b className="font-medium text-bone">Every {keyLabel(settings.root, settings.tonality).replace("m", "")} on the neck</b>
+            . Each root takes the colour of the form that frets it, and the solid lines are octaves: the same note two
+            strings over, which is the move you make when you shift position. The dashed lines are the two octave jump
+            straight across all six strings. Turn labels off to test whether you can still find them.
           </>
         ) : view.allShapes ? (
           <>

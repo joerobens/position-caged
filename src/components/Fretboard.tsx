@@ -3,6 +3,7 @@
 import { memo, useMemo } from "react";
 import {
   DEGREES,
+  KEYS,
   FRET_COUNT,
   STRING_LABELS,
   chordToneKeys,
@@ -33,6 +34,9 @@ const INLAYS = [3, 5, 7, 9, 15];
 const STRING_MIDI = [40, 45, 50, 55, 59, 64];
 
 const fretX = (fret: number) => (fret === 0 ? NUT_X - 22 : NUT_X + (fret - 0.5) * FRET_WIDTH);
+/** What goes inside a dot. Empty is a real answer: it is how you test yourself. */
+const dotLabel = (labels: Labels, degree: number, string: number, fret: number) =>
+  labels === "none" ? "" : labels === "degrees" ? DEGREES[degree] : noteNameAt(string, fret);
 const stringY = (string: number) => TOP_Y + (5 - string) * STRING_GAP;
 /** Left edge of the block of frets from `low` to `high`. */
 const blockLeft = (low: number) => (low === 0 ? NUT_X - 34 : NUT_X + (low - 1) * FRET_WIDTH);
@@ -51,6 +55,8 @@ type Props = {
   labels: Labels;
   /** Show every shape at once, each in its own colour. */
   allShapes?: boolean;
+  /** Show only the roots, joined by their octave links. */
+  rootMap?: boolean;
   /** The scale layer. Off leaves the chord tones on their own. */
   showScale?: boolean;
   /** A finger exercise, with the cursor sitting on the note due now. */
@@ -90,6 +96,7 @@ function Fretboard({
   zoom,
   labels,
   allShapes = false,
+  rootMap = false,
   showScale = true,
   spider = null,
   onPlayNote,
@@ -122,22 +129,22 @@ function Fretboard({
     const left = blockLeft(span.low);
     const right = blockRight(span.high);
     const gutter = span.low === 0 ? -28 : left - 34;
-    const height = allShapes ? BOARD_HEIGHT + MAP_HEIGHT : BOARD_HEIGHT;
+    const height = allShapes || rootMap ? BOARD_HEIGHT + MAP_HEIGHT : BOARD_HEIGHT;
     const box =
-      zoom === "position" && !allShapes
+      zoom === "position" && !allShapes && !rootMap
         ? [gutter, 0, right - gutter + 16, height]
         : [0, 0, BOARD_WIDTH, height];
     return {
       primary,
       secondary,
-      labelX: zoom === "position" && !allShapes ? gutter + 14 : 14,
+      labelX: zoom === "position" && !allShapes && !rootMap ? gutter + 14 : 14,
       box,
     };
-  }, [position, pair, zoom, allShapes, spiderWindow]);
+  }, [position, pair, zoom, allShapes, rootMap, spiderWindow]);
 
   const colour = position.shape.colour;
   const chordTones = useMemo(() => chordToneKeys(position), [position]);
-  const grips = useMemo(() => (allShapes ? gripMembership(positions) : null), [allShapes, positions]);
+  const grips = useMemo(() => (allShapes || rootMap ? gripMembership(positions) : null), [allShapes, rootMap, positions]);
   const colourOf = useMemo(() => {
     const map = new Map<string, string>();
     positions.forEach((entry) => map.set(entry.name, entry.shape.colour));
@@ -147,7 +154,7 @@ function Fretboard({
   const visibleFrets = useMemo(() => {
     const frets: number[] = [];
     for (let f = 0; f <= FRET_COUNT; f++) {
-      if (zoom === "position" && !allShapes) {
+      if (zoom === "position" && !allShapes && !rootMap) {
         const inPrimary = f >= view.primary.low - 1 && f <= view.primary.high + 1;
         const inSecondary = !!view.secondary && f >= view.secondary.low - 1 && f <= view.secondary.high + 1;
         if (!inPrimary && !inSecondary) continue;
@@ -155,7 +162,7 @@ function Fretboard({
       frets.push(f);
     }
     return frets;
-  }, [zoom, allShapes, view]);
+  }, [zoom, allShapes, rootMap, view]);
 
   /**
    * Every shape at once. Notes a shape frets take that shape's colour, notes two
@@ -163,7 +170,7 @@ function Fretboard({
    * behind them faintly so the neck reads as full rather than as five islands.
    */
   const allNotes = useMemo(() => {
-    if (!allShapes || spiderWindow || !grips) return null;
+    if (!allShapes || rootMap || spiderWindow || !grips) return null;
     return chordTonesOnNeck(root, tonality).map((note) => {
       const key = `${note.string}:${note.fret}`;
       const owners = grips.get(key) ?? [];
@@ -175,14 +182,54 @@ function Fretboard({
         x: fretX(note.fret),
         y: stringY(note.string),
         isRoot: note.degree === 0,
-        text: labels === "degrees" ? DEGREES[note.degree] : noteNameAt(note.string, note.fret),
+        text: dotLabel(labels, note.degree, note.string, note.fret),
         midi: STRING_MIDI[note.string] + note.fret,
       };
     });
-  }, [allShapes, spiderWindow, grips, root, tonality, colourOf, colour, labels]);
+  }, [allShapes, rootMap, spiderWindow, grips, root, tonality, colourOf, colour, labels]);
+
+
+  /**
+   * Every root on the neck, and the octave links between them. The links are the
+   * point: a root joined to the same note two strings over is the shift you make
+   * when you move position, so the lattice is what you are actually learning.
+   */
+  const rootLattice = useMemo(() => {
+    if (!rootMap) return null;
+    const notes: { key: string; string: number; fret: number; x: number; y: number; midi: number; colour: string }[] = [];
+    for (let string = 0; string < 6; string++) {
+      for (let fret = 0; fret <= FRET_COUNT; fret++) {
+        if (degreeAt(string, fret, root) !== 0) continue;
+        const owners = grips?.get(`${string}:${fret}`) ?? [];
+        notes.push({
+          key: `${string}:${fret}`,
+          string,
+          fret,
+          x: fretX(fret),
+          y: stringY(string),
+          midi: STRING_MIDI[string] + fret,
+          colour: owners.length ? (colourOf.get(owners[0]) ?? colour) : "#948A7D",
+        });
+      }
+    }
+    const links: { key: string; a: (typeof notes)[number]; b: (typeof notes)[number]; wide: boolean }[] = [];
+    for (const a of notes) {
+      for (const b of notes) {
+        if (b.string <= a.string) continue;
+        const strings = b.string - a.string;
+        const semitones = b.midi - a.midi;
+        // The two shapes every guitarist ends up knowing: the octave two strings
+        // over, and the double octave straight across all six.
+        const octave = semitones === 12 && (strings === 2 || strings === 3);
+        const doubleOctave = semitones === 24 && strings === 5;
+        if (octave || doubleOctave) links.push({ key: `${a.key}-${b.key}`, a, b, wide: doubleOctave });
+      }
+    }
+    return { notes, links };
+  }, [rootMap, root, grips, colourOf, colour]);
 
   const notes = useMemo(() => {
-    if (allShapes || spiderWindow) return [];
+    if (allShapes || rootMap || spiderWindow) return [];
     const out: {
       key: string;
       x: number;
@@ -206,7 +253,7 @@ function Fretboard({
           key: `${string}:${fret}`,
           x: fretX(fret),
           y: stringY(string),
-          text: labels === "degrees" ? DEGREES[degree] : noteNameAt(string, fret),
+          text: dotLabel(labels, degree, string, fret),
           kind: degree === 0 ? "root" : isChordTone ? "chord" : "scale",
           ghost: !primary,
           midi: STRING_MIDI[string] + fret,
@@ -214,7 +261,7 @@ function Fretboard({
       }
     }
     return out;
-  }, [allShapes, spiderWindow, view, root, intervals, chordTones, labels, showScale]);
+  }, [allShapes, rootMap, spiderWindow, view, root, intervals, chordTones, labels, showScale]);
 
   const barre = position.shape.barre;
   const primaryLeft = blockLeft(view.primary.low);
@@ -229,7 +276,9 @@ function Fretboard({
       aria-label={
         spiderWindow
           ? `Guitar neck showing a spider walk across frets ${spiderWindow.low} to ${spiderWindow.high}`
-          : allShapes
+          : rootMap
+            ? `Guitar neck showing every ${KEYS[root]} root and the octave links between them`
+            : allShapes
             ? "Guitar neck showing all five CAGED shapes, each in its own colour"
             : `Guitar neck showing the ${position.name} shape at fret ${position.fret}`
       }
@@ -256,7 +305,7 @@ function Fretboard({
         height={5 * STRING_GAP + 22}
         rx={10}
         fill={colour}
-        opacity={spiderWindow ? 0.04 : allShapes ? 0.05 : zoom === "position" ? 0.06 : 0.09}
+        opacity={spiderWindow ? 0.04 : allShapes || rootMap ? 0.05 : zoom === "position" ? 0.06 : 0.09}
       />
 
       {/* frets */}
@@ -306,7 +355,7 @@ function Fretboard({
       ))}
 
       {/* muted strings, for shapes played from the nut */}
-      {position.fret === 0 && !allShapes && !spiderWindow
+      {position.fret === 0 && !allShapes && !rootMap && !spiderWindow
         ? position.shape.frets.map((offset, string) =>
             offset === null ? (
               <text key={`mute-${string}`} className="fb-mark" x={NUT_X - 20} y={stringY(string) + 4} textAnchor="middle">
@@ -317,7 +366,7 @@ function Fretboard({
         : null}
 
       {/* barre */}
-      {barre && position.fret > 0 && !allShapes && !spiderWindow ? (
+      {barre && position.fret > 0 && !allShapes && !rootMap && !spiderWindow ? (
         <rect
           x={fretX(position.fret) - 9}
           y={stringY(barre[1]) - 9}
@@ -423,6 +472,38 @@ function Fretboard({
         );
       })}
 
+      {/* the roots, and the octave links that join them up */}
+      {rootLattice ? (
+        <>
+          {rootLattice.links.map((link) => (
+            <line
+              key={link.key}
+              x1={link.a.x}
+              y1={link.a.y}
+              x2={link.b.x}
+              y2={link.b.y}
+              stroke={link.wide ? "#7A6B5C" : colour}
+              strokeWidth={link.wide ? 1 : 1.5}
+              strokeOpacity={link.wide ? 0.35 : 0.5}
+              strokeDasharray={link.wide ? "3 5" : undefined}
+            />
+          ))}
+          {rootLattice.notes.map((note) => (
+            <g
+              key={note.key}
+              onPointerDown={onPlayNote ? () => onPlayNote(note.midi) : undefined}
+              style={onPlayNote ? { cursor: "pointer" } : undefined}
+            >
+              <circle cx={note.x} cy={note.y} r={15} fill="transparent" />
+              <circle cx={note.x} cy={note.y} r={13} fill={note.colour} />
+              <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill="#12100E">
+                {labels === "none" ? "" : labels === "notes" ? noteNameAt(note.string, note.fret) : "1"}
+              </text>
+            </g>
+          ))}
+        </>
+      ) : null}
+
       {/* the finger exercise: one bright dot moving, the rest of the box behind it */}
       {spider && spiderWindow
         ? (() => {
@@ -472,7 +553,7 @@ function Fretboard({
         : null}
 
       {/* where each shape sits, and which colour is which */}
-      {allShapes
+      {allShapes || rootMap
         ? positions.map((entry, index) => {
             const window = windowFor(entry);
             const left = blockLeft(window.low);
@@ -512,9 +593,11 @@ function Fretboard({
       >
         {spiderWindow
           ? `Spider walk · frets ${spiderWindow.low} to ${spiderWindow.high}`
-          : allShapes
-            ? `All five shapes · ${position.name} highlighted`
-            : `${position.name} shape`}
+          : rootMap
+            ? `Every ${KEYS[root]} on the neck · lines are octaves`
+            : allShapes
+              ? `All five shapes · ${position.name} highlighted`
+              : `${position.name} shape`}
       </text>
     </svg>
   );

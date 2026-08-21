@@ -5,7 +5,8 @@ import { SPIDER_PATTERNS, type Drill, type SpiderPattern } from "./drills";
 export type AdvanceMode = "up" | "down" | "random";
 export type Mode = "learn" | "practice";
 export type Zoom = "position" | "neck";
-export type Labels = "degrees" | "notes";
+/** None is the one that tests whether you know the shape or are reading it. */
+export type Labels = "degrees" | "notes" | "none";
 
 export type Settings = {
   root: number;
@@ -29,6 +30,8 @@ export type Settings = {
   droneFifth: boolean;
   /** Show all five shapes across the whole neck, each in its own colour. */
   allShapes: boolean;
+  /** Show only the roots, with the octave links that join them up. */
+  rootMap: boolean;
   /** The scale layer. Off leaves just the chord tones. */
   showScale: boolean;
   /** Reading the neck, or playing to the clock. */
@@ -61,6 +64,7 @@ export const DEFAULT_SETTINGS: Settings = {
   droneVolume: 0.5,
   droneFifth: true,
   allShapes: false,
+  rootMap: false,
   showScale: true,
   mode: "learn",
   drill: "caged",
