@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Position - CAGED practice",
     short_name: "Position",
     description: "The five CAGED shapes in any key, with a drone and a metronome that moves you between positions.",
-    start_url: "/",
+    start_url: "/play",
     display: "standalone",
     orientation: "any",
     background_color: "#12100E",

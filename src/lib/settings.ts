@@ -36,6 +36,8 @@ export type Settings = {
   /** Follow a progression rather than sitting on one chord. */
   changes: boolean;
   progression: string;
+  /** A chart handed over from a song page, as semitone offsets per bar. */
+  customBars: string;
   /** Which bar of the form, when the clock is not running it. */
   chordBar: number;
   /** The scale layer. Off leaves just the chord tones. */
@@ -75,6 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
   rootMap: false,
   changes: false,
   progression: "blues12",
+  customBars: "",
   chordBar: 0,
   showScale: true,
   theme: "system",

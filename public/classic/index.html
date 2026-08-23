@@ -34,6 +34,16 @@ body{
   overflow-x:hidden;
 }
 
+/* ---------- site nav ---------- */
+#sitenav{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  margin:-4px 0 2px;padding-bottom:10px;border-bottom:1px solid var(--line);
+}
+#sitenav .brand{font-weight:700;letter-spacing:-.02em;font-size:15px;color:var(--bone);text-decoration:none}
+#sitenav a.lnk{color:var(--bone-dim);text-decoration:none;font-size:14px;padding:4px 0;border-bottom:2px solid transparent}
+#sitenav a.lnk:hover{color:var(--bone)}
+#sitenav a.lnk.here{color:var(--bone);border-bottom-color:var(--shape)}
+
 /* ---------- neck ---------- */
 #neck-wrap{
   background:var(--board);border:1px solid var(--board-edge);
@@ -140,6 +150,14 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 </style>
 </head>
 <body>
+
+<nav id="sitenav" aria-label="Site">
+  <a class="brand" href="/">Position</a>
+  <a class="lnk" href="/play">Play</a>
+  <a class="lnk" href="/songs">Songs</a>
+  <a class="lnk" href="/theory">Theory</a>
+  <a class="lnk here" href="/classic/index.html" aria-current="page">Classic</a>
+</nav>
 
 <div id="neck-wrap"><svg id="neck" role="img" aria-label="Guitar neck showing the current CAGED shape"></svg></div>
 
