@@ -33,6 +33,11 @@ export type Settings = {
   allShapes: boolean;
   /** Show only the roots, with the octave links that join them up. */
   rootMap: boolean;
+  /** Follow a progression rather than sitting on one chord. */
+  changes: boolean;
+  progression: string;
+  /** Which bar of the form, when the clock is not running it. */
+  chordBar: number;
   /** The scale layer. Off leaves just the chord tones. */
   showScale: boolean;
   /** Follow the system, or override it. */
@@ -68,6 +73,9 @@ export const DEFAULT_SETTINGS: Settings = {
   droneFifth: true,
   allShapes: false,
   rootMap: false,
+  changes: false,
+  progression: "blues12",
+  chordBar: 0,
   showScale: true,
   theme: "system",
   mode: "learn",

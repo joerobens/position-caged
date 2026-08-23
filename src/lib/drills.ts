@@ -1,6 +1,6 @@
 import { FRET_COUNT } from "./music";
 
-export type Drill = "caged" | "slide" | "spider";
+export type Drill = "caged" | "slide" | "spider" | "changes";
 
 export const DRILLS: { id: Drill; name: string; blurb: string }[] = [
   {
@@ -12,6 +12,11 @@ export const DRILLS: { id: Drill; name: string; blurb: string }[] = [
     id: "slide",
     name: "Two-shape slide",
     blurb: "Back and forth between two positions you pick, so you drill the shift itself rather than the boxes.",
+  },
+  {
+    id: "changes",
+    name: "Changes",
+    blurb: "The metronome walks the form a bar at a time. Stay where you are and follow the chord, aiming at its third.",
   },
   {
     id: "spider",

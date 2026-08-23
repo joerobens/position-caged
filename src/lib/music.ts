@@ -68,6 +68,9 @@ export const SCALES: Record<Tonality, Record<string, number[]>> = {
     Blues: [0, 3, 5, 6, 7, 10],
     Mixolydian: [0, 2, 4, 5, 7, 9, 10],
     Major: [0, 2, 4, 5, 7, 9, 11],
+    // Major and minor pentatonic at once: up major, down minor. The b3 and the 3
+    // sitting a fret apart is the whole blues sound.
+    "Blues blend": [0, 2, 3, 4, 5, 7, 9, 10],
   },
   minor: {
     "Chord tones": [0, 3, 7],

@@ -23,6 +23,8 @@ export type ViewModel = {
   pairDrawn: boolean;
   /** The neck is showing a finger exercise rather than a shape. */
   spiderDrawn: boolean;
+  /** The neck is following a progression, chord by chord. */
+  changesDrawn: boolean;
   /** Bars between shape changes, once the drill has had its say. */
   advanceBars: number;
   /** Why the controls above are missing, when they are. */
@@ -34,22 +36,27 @@ export function deriveView(settings: Settings): ViewModel {
   const practising = mode === "practice";
   // The spider walk owns the neck: it is a finger exercise, not a shape.
   const spiderDrawn = practising && drill === "spider";
-  const rootMapDrawn = rootMap && !spiderDrawn;
+  // Changes is a drill when the clock is running it and a layer when you are not.
+  const changesDrawn = !spiderDrawn && (practising ? drill === "changes" : settings.changes);
+  const rootMapDrawn = rootMap && !spiderDrawn && !changesDrawn;
 
   return {
     mode,
-    allShapes: allShapes && !rootMapDrawn && !spiderDrawn,
+    allShapes: allShapes && !rootMapDrawn && !spiderDrawn && !changesDrawn,
     rootMap: rootMapDrawn,
+    changesDrawn,
     // All five shapes only means anything across the whole neck.
-    zoom: spiderDrawn ? "position" : allShapes || rootMapDrawn ? "neck" : settings.zoom,
+    zoom: spiderDrawn ? "position" : changesDrawn ? "position" : allShapes || rootMapDrawn ? "neck" : settings.zoom,
     scaleDrawn: !allShapes && !rootMapDrawn && !spiderDrawn && settings.showScale,
-    zoomAvailable: !allShapes && !rootMapDrawn && !spiderDrawn,
+    zoomAvailable: !allShapes && !rootMapDrawn && !spiderDrawn && !changesDrawn,
     scaleAvailable: !allShapes && !rootMapDrawn && !spiderDrawn,
-    pairDrawn: !allShapes && !rootMapDrawn && !spiderDrawn && practising && drill === "slide",
+    pairDrawn: !allShapes && !rootMapDrawn && !spiderDrawn && !changesDrawn && practising && drill === "slide",
     spiderDrawn,
     // Only the shape drills move you between positions.
     advanceBars: practising && (drill === "caged" || drill === "slide") ? settings.advanceBars : 0,
-    note: rootMapDrawn
+    note: changesDrawn
+      ? "Changes follows the progression instead of one chord. The shape chips still choose the region you play in; the neck brings each chord to you there. Degrees are counted from the chord you are on, not from the key, which is the point: the third moves when the chord does."
+      : rootMapDrawn
       ? "Roots strips the neck back to the one note that names everything. The lines are octaves: the same note in another place, which is the move you make when you shift position."
       : allShapes && !spiderDrawn
         ? "All five covers the whole neck and draws chord tones only, so the view and the scale layer are set for you here. A seven note scale across five positions is around ninety dots, which reads as noise from a music stand."

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import Fretboard from "@/components/Fretboard";
 import KeyBar from "@/components/KeyBar";
 import CycleStrip from "@/components/CycleStrip";
+import BarStrip from "@/components/BarStrip";
 import Transport, { MAX_BPM, MIN_BPM } from "@/components/Transport";
 import { ChipGroup, Field, Segmented, Slider, Toggle } from "@/components/controls";
 import { useMetronome } from "@/hooks/useMetronome";
@@ -12,6 +13,7 @@ import { getAudioEngine } from "@/lib/audio";
 import { DRILLS, SPIDER_PATTERNS, spiderSequence, spiderStepAt, type Drill } from "@/lib/drills";
 import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
 import { scaleForTonality, type AdvanceMode, type Mode, type Settings } from "@/lib/settings";
+import { PROGRESSIONS, chordAt, nearestPosition } from "@/lib/progressions";
 import { deriveView } from "@/lib/view";
 import { paletteFor } from "@/lib/theme";
 import { useTheme } from "@/hooks/useTheme";
@@ -33,6 +35,8 @@ const INFO = {
     "The five CAGED shapes, ordered up the neck and named for the open chord each one comes from. All shows every shape at once, each in its own colour. Roots strips it back to the root notes and the octave links between them, which is the map underneath everything else.",
   scale:
     "The scale drawn around the shape. Turn it off to leave just the chord tones, which is how you check you actually know where the 1, 3 and 5 are rather than running a pattern.",
+  changes: "Follow the chords instead of sitting on one. The shape chips still pick the region you play in, and each chord comes to you there. Degrees count from the chord you are on, so the third is always marked 3, whichever chord it belongs to.",
+  progression: "Which form to walk. The twelve bar blues is the one you will hear; quick change borrows the IV early, in bar two.",
   drill: "What the clock is drilling. The shape drills move you around the neck; the spider walk is a finger exercise and takes the neck over while it runs.",
   beats: "Beats per bar. Sets how many pips the metronome counts before the accent comes round again.",
   advance:
@@ -75,10 +79,11 @@ export default function Page() {
   const { settings, update, hydrated } = useSettings();
 
   const positions = useMemo(() => buildPositions(settings.root, settings.tonality), [settings.root, settings.tonality]);
-  const position = positions[Math.min(settings.positionIndex, positions.length - 1)];
+  const anchor = positions[Math.min(settings.positionIndex, positions.length - 1)];
   const pairPosition = positions[Math.min(settings.pairIndex, positions.length - 1)];
   const intervals = SCALES[settings.tonality][settings.scale] ?? Object.values(SCALES[settings.tonality])[0];
   const view = deriveView(settings);
+  const progression = PROGRESSIONS.find((entry) => entry.id === settings.progression) ?? PROGRESSIONS[0];
   const resolvedTheme = useTheme(settings.theme);
   const palette = paletteFor(resolvedTheme);
 
@@ -105,13 +110,6 @@ export default function Page() {
     [update],
   );
 
-  // The accent follows the shape, so the whole interface tells you where you are.
-  const accent = palette.shapes[position.name];
-  useEffect(() => {
-    document.documentElement.style.setProperty("--accent", accent);
-    document.documentElement.style.setProperty("--fb-dim", palette.dim);
-  }, [accent, palette.dim]);
-
   const advance = useCallback(() => {
     update((current) => advancePatch(current, positions.length));
   }, [update, positions.length]);
@@ -136,6 +134,20 @@ export default function Page() {
     [settings.spiderStartFret, settings.spiderPattern, settings.spiderBoth, settings.spiderShift],
   );
   const spider = view.spiderDrawn ? { steps: spiderSteps, index: spiderStepAt(spiderSteps, metronome.pulse) } : null;
+
+  // The clock owns the form while it is running. Off the clock you step it yourself.
+  const activeBar = metronome.playing && settings.mode === "practice" ? metronome.bar : settings.chordBar;
+  const chord = view.changesDrawn ? chordAt(progression, settings.root, activeBar) : null;
+  // Following changes, the neck shows the chord's own shape nearest where you are.
+  const position = chord ? nearestPosition(chord.root, settings.tonality, anchor.fret) : anchor;
+
+  // The accent follows the shape, so the whole interface tells you where you are.
+  const accent = palette.shapes[position.name];
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", accent);
+    document.documentElement.style.setProperty("--fb-dim", palette.dim);
+  }, [accent, palette.dim]);
+
 
   // Drone. Retunes rather than restarting, so changing key mid-practice does not click.
   useEffect(() => {
@@ -278,6 +290,7 @@ export default function Page() {
           showScale={view.scaleDrawn}
           spider={spider}
           palette={palette}
+          chord={chord}
           onPlayNote={playNote}
         />
         </div>
@@ -419,6 +432,43 @@ export default function Page() {
                 )}
               </Field>
             ) : null}
+            <Field
+              label="Changes"
+              info={INFO.changes}
+              action={
+                <button
+                  type="button"
+                  className="chip chip-sm"
+                  aria-pressed={settings.changes}
+                  onClick={() => update({ changes: !settings.changes, rootMap: false, allShapes: false })}
+                >
+                  {settings.changes ? "Following" : "Off"}
+                </button>
+              }
+            >
+              {settings.changes ? (
+                <div className="flex flex-col gap-3">
+                  <ChipGroup
+                    ariaLabel="Progression"
+                    value={settings.progression}
+                    onChange={(value) => update({ progression: value, chordBar: 0 })}
+                    options={PROGRESSIONS.map((entry) => ({ value: entry.id, label: entry.name }))}
+                  />
+                  <BarStrip
+                    progression={progression}
+                    keyRoot={settings.root}
+                    bar={settings.chordBar}
+                    palette={palette}
+                    onSelect={(value) => update({ chordBar: value })}
+                  />
+                  <p className="text-[13px] leading-relaxed text-bone-dim">{progression.blurb}</p>
+                </div>
+              ) : (
+                <p className="text-[13px] leading-relaxed text-bone-dim">
+                  Sitting on one chord. Turn this on to walk a form and let the chords come to you.
+                </p>
+              )}
+            </Field>
             {view.note ? (
               <p className="rounded-xl border border-line bg-ink/40 p-3 text-[13px] leading-relaxed text-bone-dim">
                 {view.note}
@@ -453,7 +503,30 @@ export default function Page() {
             </div>
 
             <div className="panel flex flex-col gap-4">
-              {settings.drill === "spider" ? (
+              {settings.drill === "changes" ? (
+                <>
+                  <Field label="Progression" info={INFO.progression}>
+                    <ChipGroup
+                      ariaLabel="Progression"
+                      value={settings.progression}
+                      onChange={(value) => update({ progression: value, chordBar: 0 })}
+                      options={PROGRESSIONS.map((entry) => ({ value: entry.id, label: entry.name }))}
+                    />
+                  </Field>
+                  <BarStrip
+                    progression={progression}
+                    keyRoot={settings.root}
+                    bar={activeBar}
+                    palette={palette}
+                    onSelect={metronome.playing ? undefined : (value) => update({ chordBar: value })}
+                  />
+                  <p className="text-[13px] leading-relaxed text-bone-dim">
+                    {metronome.playing
+                      ? `Bar ${(activeBar % progression.bars.length) + 1} of ${progression.bars.length}. Stay in the ${anchor.name} shape region and let the chords come to you.`
+                      : "Press play and the form walks itself, a bar at a time."}
+                  </p>
+                </>
+              ) : settings.drill === "spider" ? (
                 <>
                   <Field label="Start fret" info={INFO.spiderStart}>
                     <Slider
@@ -564,6 +637,15 @@ export default function Page() {
             <b className="font-medium text-bone">Spider walk, {settings.spiderPattern}</b>, one note per beat. The
             filled dot is the note due now and the ringed one is next; the numbers are fingers, not frets. Space starts
             and stops, arrows change tempo. L and P switch modes.
+          </>
+        ) : chord ? (
+          <>
+            <b className="font-medium text-bone">
+              {chord.name}, the {chord.roman} of {keyLabel(settings.root, settings.tonality)}
+            </b>
+            . Filled dot with a ring around it is the third, which is the note to aim at. Dashed dots are the half step
+            either side of it, the ones you lean on to get there. Everything is counted from this chord, so when the
+            chord changes the third moves with it. That is the thing the pentatonic box cannot show you.
           </>
         ) : view.rootMap ? (
           <>

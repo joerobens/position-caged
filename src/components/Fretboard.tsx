@@ -4,6 +4,7 @@ import { memo, useMemo } from "react";
 import {
   DEGREES,
   KEYS,
+  NAMES,
   FRET_COUNT,
   STRING_LABELS,
   chordToneKeys,
@@ -17,6 +18,7 @@ import {
 import type { Labels, Zoom } from "@/lib/settings";
 import type { SpiderStep } from "@/lib/drills";
 import type { Palette } from "@/lib/theme";
+import { APPROACH_ABOVE, APPROACH_BELOW, TARGET_THIRD, type Chord } from "@/lib/progressions";
 
 /** Neck geometry, in SVG user units. */
 const NUT_X = 64;
@@ -64,6 +66,8 @@ type Props = {
   spider?: { steps: SpiderStep[]; index: number } | null;
   /** Board and note colours for the active theme. */
   palette: Palette;
+  /** The chord of the progression you are on, when following changes. */
+  chord?: Chord | null;
   onPlayNote?: (midi: number) => void;
 };
 
@@ -103,6 +107,7 @@ function Fretboard({
   showScale = true,
   spider = null,
   palette,
+  chord = null,
   onPlayNote,
 }: Props) {
   const spiderWindow = useMemo(() => {
@@ -253,7 +258,7 @@ function Fretboard({
       x: number;
       y: number;
       text: string;
-      kind: "root" | "chord" | "scale";
+      kind: "root" | "target" | "chord" | "approach" | "scale";
       ghost: boolean;
       midi: number;
     }[] = [];
@@ -264,26 +269,41 @@ function Fretboard({
         const secondary = view.secondary ? inWindow(view.secondary, fret) : false;
         if (!primary && !secondary) continue;
         const degree = degreeAt(string, fret, root);
+        // Following changes, everything is counted from the chord you are on. That
+        // is the lesson: the third moves when the chord does, so a note that was
+        // the target in one bar is a passing note in the next.
+        const fromChord = chord ? degreeAt(string, fret, chord.root) : degree;
         const isChordTone = primary && chordTones.has(`${string}:${fret}`);
+        const isTarget = !!chord && primary && fromChord === TARGET_THIRD;
+        const isApproach =
+          !!chord && primary && !isChordTone && (fromChord === APPROACH_BELOW || fromChord === APPROACH_ABOVE);
         const inScale = showScale && intervals.includes(degree);
-        if (!inScale && !isChordTone) continue;
+        if (!inScale && !isChordTone && !isTarget && !isApproach) continue;
         out.push({
           key: `${string}:${fret}`,
           x: fretX(fret),
           y: stringY(string),
-          text: dotLabel(labels, degree, string, fret),
-          kind: degree === 0 ? "root" : isChordTone ? "chord" : "scale",
+          text: dotLabel(labels, fromChord, string, fret),
+          kind: isTarget
+            ? "target"
+            : fromChord === 0
+              ? "root"
+              : isChordTone
+                ? "chord"
+                : isApproach
+                  ? "approach"
+                  : "scale",
           ghost: !primary,
           midi: STRING_MIDI[string] + fret,
         });
       }
     }
     return out;
-  }, [allShapes, rootMap, spiderWindow, view, root, intervals, chordTones, labels, showScale]);
+  }, [allShapes, rootMap, spiderWindow, view, root, intervals, chordTones, labels, showScale, chord]);
 
   const barre = position.shape.barre;
   // Anything that shows the whole neck puts its heading in the top left corner.
-  const wideView = allShapes || rootMap || !!spiderWindow;
+  const wideView = allShapes || rootMap || !!spiderWindow || !!chord;
   const primaryLeft = blockLeft(view.primary.low);
   const primaryRight = blockRight(view.primary.high);
 
@@ -409,7 +429,35 @@ function Fretboard({
             style={onPlayNote ? { cursor: "pointer" } : undefined}
           >
             <circle cx={note.x} cy={note.y} r={15} fill="transparent" />
-            {note.kind === "root" ? (
+            {note.kind === "target" ? (
+              // The note you are aiming at, so it gets the one treatment nothing
+              // else uses: filled, with a ring standing off it.
+              <>
+                <circle cx={note.x} cy={note.y} r={17} fill="none" stroke={tone} strokeWidth={1.5} opacity={0.6} />
+                <circle cx={note.x} cy={note.y} r={12} fill={tone} />
+                <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill={palette.onAccent}>
+                  {note.text}
+                </text>
+              </>
+            ) : note.kind === "approach" ? (
+              // A half step either side of the target. Dashed, because you pass
+              // through it rather than land on it.
+              <>
+                <circle
+                  cx={note.x}
+                  cy={note.y}
+                  r={11}
+                  fill={palette.dotFill}
+                  stroke={tone}
+                  strokeWidth={1.5}
+                  strokeDasharray="3 3"
+                  opacity={0.85}
+                />
+                <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill={tone} opacity={0.85}>
+                  {note.text}
+                </text>
+              </>
+            ) : note.kind === "root" ? (
               <>
                 <circle cx={note.x} cy={note.y} r={12} fill={tone} />
                 <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill={palette.onAccent}>
@@ -616,8 +664,10 @@ function Fretboard({
       >
         {spiderWindow
           ? `Spider walk · frets ${spiderWindow.low} to ${spiderWindow.high}`
-          : rootMap
-            ? `Every ${KEYS[root]} on the neck`
+          : chord
+            ? `${chord.name}  ·  the ${chord.roman} chord`
+            : rootMap
+              ? `Every ${KEYS[root]} on the neck`
             : allShapes
               ? `All five shapes · ${position.name} highlighted`
               : `${position.name} shape`}
@@ -625,6 +675,11 @@ function Fretboard({
       {rootMap ? (
         <text className="voice-txt" x={view.box[0] + view.box[2] - 16} y={TOP_Y - 20} textAnchor="end" fill={colour} opacity={0.75}>
           lines are octaves
+        </text>
+      ) : null}
+      {chord ? (
+        <text className="voice-txt" x={view.box[0] + view.box[2] - 16} y={TOP_Y - 20} textAnchor="end" fill={colour} opacity={0.85}>
+          aim at {NAMES[(chord.root + TARGET_THIRD) % 12]}, its 3rd
         </text>
       ) : null}
     </svg>
