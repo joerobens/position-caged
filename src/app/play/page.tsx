@@ -15,7 +15,6 @@ import { getAudioEngine } from "@/lib/audio";
 import { DRILLS, SPIDER_PATTERNS, spiderSequence, spiderStepAt, type Drill } from "@/lib/drills";
 import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
 import { scaleForTonality, type AdvanceMode, type Mode, type Settings } from "@/lib/settings";
-import Link from "next/link";
 import { PROGRESSIONS, chordAt, nearestPosition, type Progression } from "@/lib/progressions";
 import { deriveView } from "@/lib/view";
 import { paletteFor } from "@/lib/theme";
