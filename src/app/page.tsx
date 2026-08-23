@@ -5,6 +5,7 @@ import Fretboard from "@/components/Fretboard";
 import KeyBar from "@/components/KeyBar";
 import CycleStrip from "@/components/CycleStrip";
 import BarStrip from "@/components/BarStrip";
+import TechniqueNote from "@/components/TechniqueNote";
 import Transport, { MAX_BPM, MIN_BPM } from "@/components/Transport";
 import { ChipGroup, Field, Segmented, Slider, Toggle } from "@/components/controls";
 import { useMetronome } from "@/hooks/useMetronome";
@@ -35,6 +36,7 @@ const INFO = {
     "The five CAGED shapes, ordered up the neck and named for the open chord each one comes from. All shows every shape at once, each in its own colour. Roots strips it back to the root notes and the octave links between them, which is the map underneath everything else.",
   scale:
     "The scale drawn around the shape. Turn it off to leave just the chord tones, which is how you check you actually know where the 1, 3 and 5 are rather than running a pattern.",
+  region: "Where you are standing on the neck. Following changes this does not pick a chord, it picks the patch of neck you play in, and each chord's nearest shape is brought to you there.",
   changes: "Follow the chords instead of sitting on one. The shape chips still pick the region you play in, and each chord comes to you there. Degrees count from the chord you are on, so the third is always marked 3, whichever chord it belongs to.",
   progression: "Which form to walk. The twelve bar blues is the one you will hear; quick change borrows the IV early, in bar two.",
   drill: "What the clock is drilling. The shape drills move you around the neck; the spider walk is a finger exercise and takes the neck over while it runs.",
@@ -239,11 +241,17 @@ export default function Page() {
     label: `${entry.name}${entry.fret === 0 ? " (open)" : ` · ${entry.fret}`}`,
     title: entry.fret === 0 ? `${entry.name} shape at the nut` : `${entry.name} shape, index finger at fret ${entry.fret}`,
   }));
-  const shapeChoices = [
-    { value: "all", label: "All", title: "Every shape at once, colour coded, across the whole neck" },
-    { value: "roots", label: "Roots", title: "Every root on the neck, joined by its octave links" },
-    ...shapeOptions.map((option) => ({ ...option, value: String(option.value) })),
-  ];
+  const shapeChoices = view.changesDrawn
+    ? positions.map((entry, index) => ({
+        value: String(index),
+        label: entry.fret === 0 ? "Nut" : `Fret ${entry.fret}`,
+        title: `Play around fret ${entry.fret}, where the key's ${entry.name} shape sits`,
+      }))
+    : [
+        { value: "all", label: "All", title: "Every shape at once, colour coded, across the whole neck" },
+        { value: "roots", label: "Roots", title: "Every root on the neck, joined by its octave links" },
+        ...shapeOptions.map((option) => ({ ...option, value: String(option.value) })),
+      ];
   const shapeChoice = view.rootMap ? "roots" : settings.allShapes ? "all" : String(settings.positionIndex);
 
   const drill = DRILLS.find((entry) => entry.id === settings.drill) ?? DRILLS[0];
@@ -388,7 +396,10 @@ export default function Page() {
           </div>
 
           <div className="panel flex flex-col gap-4">
-            <Field label="Shape" info={INFO.shape}>
+            <Field
+              label={view.changesDrawn ? "Region" : "Shape"}
+              info={view.changesDrawn ? INFO.region : INFO.shape}
+            >
               <ChipGroup
                 ariaLabel="Shape"
                 value={shapeChoice}
@@ -401,7 +412,14 @@ export default function Page() {
                 }
                 options={shapeChoices}
               />
-              <CycleStrip positions={positions} current={position.name} palette={palette} />
+              {view.changesDrawn ? (
+                <p className="text-[13px] leading-relaxed text-bone-dim">
+                  You stand here and the chords come to you. Move along the neck to play the same form somewhere else,
+                  which is the drill: one region at a time, not one box forever.
+                </p>
+              ) : (
+                <CycleStrip positions={positions} current={position.name} palette={palette} />
+              )}
             </Field>
             {view.scaleAvailable ? (
               <Field
@@ -462,6 +480,7 @@ export default function Page() {
                     onSelect={(value) => update({ chordBar: value })}
                   />
                   <p className="text-[13px] leading-relaxed text-bone-dim">{progression.blurb}</p>
+                  <TechniqueNote />
                 </div>
               ) : (
                 <p className="text-[13px] leading-relaxed text-bone-dim">
@@ -522,9 +541,10 @@ export default function Page() {
                   />
                   <p className="text-[13px] leading-relaxed text-bone-dim">
                     {metronome.playing
-                      ? `Bar ${(activeBar % progression.bars.length) + 1} of ${progression.bars.length}. Stay in the ${anchor.name} shape region and let the chords come to you.`
+                      ? `Bar ${(activeBar % progression.bars.length) + 1} of ${progression.bars.length}. Stay where you are and let the chords come to you.`
                       : "Press play and the form walks itself, a bar at a time."}
                   </p>
+                  <TechniqueNote />
                 </>
               ) : settings.drill === "spider" ? (
                 <>

@@ -665,7 +665,7 @@ function Fretboard({
         {spiderWindow
           ? `Spider walk · frets ${spiderWindow.low} to ${spiderWindow.high}`
           : chord
-            ? `${chord.name}  ·  the ${chord.roman} chord`
+            ? `${chord.name}  ·  ${chord.roman}  ·  ${position.name} shape`
             : rootMap
               ? `Every ${KEYS[root]} on the neck`
             : allShapes
@@ -679,7 +679,7 @@ function Fretboard({
       ) : null}
       {chord ? (
         <text className="voice-txt" x={view.box[0] + view.box[2] - 16} y={TOP_Y - 20} textAnchor="end" fill={colour} opacity={0.85}>
-          aim at {NAMES[(chord.root + TARGET_THIRD) % 12]}, its 3rd
+          aim at {NAMES[(chord.root + TARGET_THIRD) % 12]} (3rd)
         </text>
       ) : null}
     </svg>
