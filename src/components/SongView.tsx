@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLibrary } from "@/hooks/useLibrary";
 import { findSong, setLyrics } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
-import { barOffsets, chartChords, chordName, parseChord } from "@/lib/nashville";
+import { barOffsets, chartChords, chordName, numberingOf, parseChord } from "@/lib/nashville";
 
 export default function SongView({ slug }: { slug: string }) {
   const library = useLibrary();
@@ -30,12 +30,18 @@ export default function SongView({ slug }: { slug: string }) {
 
   const root = transpose ?? song.root;
   const lyrics = library.lyrics[song.slug] ?? "";
+  // A minor chart is numbered from its relative major, so that is what the
+  // numbers are counted and spelled against.
+  const numbering = numberingOf(song);
+  const spellRoot = (root + (numbering.relative ? 3 : 0)) % 12;
   const chords = chartChords(
     song.chart.flatMap((section) => section.bars),
-    song.tonality,
+    numbering.steps,
   );
   const practiceHref = `/play?mode=practice&drill=changes&key=${root}&tonality=${song.tonality}&bars=${encodeURIComponent(
-    barOffsets(song.chart[0].bars, song.tonality).join(","),
+    barOffsets(song.chart[0].bars, numbering.steps)
+      .map((offset) => (offset + (numbering.relative ? 3 : 0)) % 12)
+      .join(","),
   )}`;
 
   return (
@@ -70,7 +76,7 @@ export default function SongView({ slug }: { slug: string }) {
             <span className="label">{section.name}</span>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {section.bars.map((bar, index) => {
-                const token = parseChord(bar, song.tonality);
+                const token = parseChord(bar, numbering.steps);
                 return (
                   <div
                     key={index}
@@ -78,7 +84,7 @@ export default function SongView({ slug }: { slug: string }) {
                   >
                     <div className="font-mono text-[15px] font-medium">{bar}</div>
                     <div className="mt-0.5 font-mono text-[10px] text-bone-dim">
-                      {token && !token.hold ? chordName(token, root) : " "}
+                      {token && !token.hold ? chordName(token, spellRoot) : " "}
                     </div>
                   </div>
                 );
@@ -92,7 +98,7 @@ export default function SongView({ slug }: { slug: string }) {
         <span className="text-[13px] text-bone-dim">In {KEYS[root]} that is</span>
         {chords.map((token) => (
           <span key={token.raw} className="chip chip-sm font-mono">
-            {token.raw} = {chordName(token, root)}
+            {token.raw} = {chordName(token, spellRoot)}
           </span>
         ))}
         <Link

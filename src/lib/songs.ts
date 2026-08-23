@@ -17,6 +17,12 @@ export type Song = {
   feel?: string;
   bpm?: number;
   chart: ChartSection[];
+  /**
+   * How the chart is numbered. Minor songs default to the numbers of their
+   * relative major, which is the convention; "tonic" counts from the song's own
+   * root instead.
+   */
+  numbering?: "relative-major" | "tonic";
   /** Why it is worth having in here. */
   note?: string;
 };
@@ -77,8 +83,8 @@ export const SEEDED_SONGS: Song[] = [
     tonality: "minor",
     feel: "slow, free",
     bpm: 68,
-    chart: [{ name: "Verse", bars: ["1m", "1m", "4m", "1m", "1m", "3", "5", "1m"] }],
-    note: "Minor, and the one place the app's minor shapes earn their keep. The 3 in bar six is the relative major arriving and then leaving again.",
+    chart: [{ name: "Verse", bars: ["6-", "6-", "2-", "6-", "6-", "1", "3", "6-"] }],
+    note: "Minor, so it is written in the numbers of its relative major: the 6- is the A minor you are actually sitting on. The 3 in bar six is a major chord standing in for a 5, which is what minor key songs do.",
   },
   {
     slug: "shady-grove",
@@ -88,8 +94,8 @@ export const SEEDED_SONGS: Song[] = [
     tonality: "minor",
     feel: "driving",
     bpm: 112,
-    chart: [{ name: "Verse", bars: ["1m", "1m", "b7", "b7", "1m", "1m", "b7", "1m"] }],
-    note: "Modal rather than minor: the b7 where you expect a 5. Worth having because it breaks the habit of always resolving the same way.",
+    chart: [{ name: "Verse", bars: ["6-", "6-", "5", "5", "6-", "6-", "5", "6-"] }],
+    note: "Modal rather than minor. Counted from its relative major it is just a 6- and a 5, which is the clearest sign that the chord you keep landing on is not the one the numbers call home.",
   },
   {
     slug: "amazing-grace",

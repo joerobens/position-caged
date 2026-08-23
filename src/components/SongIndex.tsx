@@ -6,7 +6,7 @@ import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useLibrary } from "@/hooks/useLibrary";
 import { allSongs } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
-import { chartChords } from "@/lib/nashville";
+import { chartChords, numberingOf } from "@/lib/nashville";
 
 export default function SongIndex() {
   const library = useLibrary();
@@ -18,7 +18,7 @@ export default function SongIndex() {
     return songs
       .map((song) => {
         const bars = song.chart.flatMap((section) => section.bars);
-        const chords = chartChords(bars, song.tonality);
+        const chords = chartChords(bars, numberingOf(song).steps);
         return {
           song,
           numbers: chords.map((token) => token.raw).join(" "),
