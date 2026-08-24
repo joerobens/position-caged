@@ -10,6 +10,7 @@ import type { ThemePreference } from "@/lib/theme";
 const LINKS = [
   { href: "/play", label: "Play" },
   { href: "/songs", label: "Songs" },
+  { href: "/sets", label: "Sets" },
   { href: "/theory", label: "Theory" },
   { href: "/classic/index.html", label: "Classic", external: true },
 ];
