@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useLibrary } from "@/hooks/useLibrary";
-import { allSongs } from "@/lib/songStore";
+import { allSongs, unhideSeeded } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { chartChords, numberingOf } from "@/lib/nashville";
 
@@ -77,6 +77,19 @@ export default function SongIndex() {
           ))}
         </ul>
       )}
+
+      {library.hidden.length ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-[13px] text-bone-dim">
+            {library.hidden.length} seeded chart{library.hidden.length === 1 ? " is" : "s are"} hidden:
+          </span>
+          {library.hidden.map((slug) => (
+            <button key={slug} type="button" className="chip chip-sm" onClick={() => unhideSeeded(slug)}>
+              Bring back {slug.replace(/-/g, " ")}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Link href="/songs/new" className="chip">

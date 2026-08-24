@@ -49,7 +49,10 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
   const pushSets: RemoteSet[] = [];
 
   // Anything the database has that is newer than the copy here comes down.
+  const wasDeleted = (key: string, at: string) => (local.deleted[key] ?? 0) > Date.parse(at);
+
   for (const row of remoteSongs) {
+    if (wasDeleted(`songs:${row.slug}`, row.updated_at)) continue;
     if (isNewer(local.touched[`songs:${row.slug}`], row.updated_at)) continue;
     const incoming: Song = {
       slug: row.slug,
@@ -69,12 +72,14 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
     pulled++;
   }
   for (const row of remoteLyrics) {
+    if (wasDeleted(`lyrics:${row.slug}`, row.updated_at)) continue;
     if (isNewer(local.touched[`lyrics:${row.slug}`], row.updated_at)) continue;
     next.lyrics[row.slug] = row.body;
     next.touched[`lyrics:${row.slug}`] = Date.parse(row.updated_at);
     pulled++;
   }
   for (const row of remoteSets) {
+    if (wasDeleted(`sets:${row.id}`, row.updated_at)) continue;
     if (isNewer(local.touched[`sets:${row.id}`], row.updated_at)) continue;
     next.sets = [
       ...next.sets.filter((set) => set.id !== row.id),
@@ -126,6 +131,30 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
     });
   }
 
+  // Deleting here has to delete there, or the next sync brings it all back.
+  const gone = { songs: [] as string[], lyrics: [] as string[], sets: [] as string[] };
+  for (const [key, at] of Object.entries(local.deleted)) {
+    const [kind, id] = [key.slice(0, key.indexOf(":")), key.slice(key.indexOf(":") + 1)];
+    const remoteAt =
+      kind === "songs" ? remoteSongAt.get(id) : kind === "lyrics" ? remoteLyricAt.get(id) : remoteSetAt.get(id);
+    if (remoteAt === undefined || at <= remoteAt) continue;
+    if (kind === "songs") gone.songs.push(id);
+    if (kind === "lyrics") gone.lyrics.push(id);
+    if (kind === "sets") gone.sets.push(id);
+  }
+  if (gone.songs.length) {
+    const { error } = await supabase.from("guitar_songs").delete().eq("user_id", userId).in("slug", gone.songs);
+    if (error) throw new Error(error.message);
+  }
+  if (gone.lyrics.length) {
+    const { error } = await supabase.from("guitar_lyrics").delete().eq("user_id", userId).in("slug", gone.lyrics);
+    if (error) throw new Error(error.message);
+  }
+  if (gone.sets.length) {
+    const { error } = await supabase.from("guitar_sets").delete().eq("user_id", userId).in("id", gone.sets);
+    if (error) throw new Error(error.message);
+  }
+
   if (pushSongs.length) {
     const { error } = await supabase.from("guitar_songs").upsert(pushSongs, { onConflict: "user_id,slug" });
     if (error) throw new Error(error.message);
@@ -142,5 +171,6 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
   const at = Date.now();
   if (pulled) mergeFromRemote(next);
   markSynced(at);
-  return { pulled, pushed: pushSongs.length + pushLyrics.length + pushSets.length, at, claim };
+  const removed = gone.songs.length + gone.lyrics.length + gone.sets.length;
+  return { pulled, pushed: pushSongs.length + pushLyrics.length + pushSets.length + removed, at, claim };
 }

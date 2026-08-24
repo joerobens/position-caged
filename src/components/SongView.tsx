@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLibrary } from "@/hooks/useLibrary";
 import SongForm from "@/components/SongForm";
-import { addSong, findSong, removeSong, setLyrics, slugify } from "@/lib/songStore";
+import { addSong, findSong, hideSeeded, removeSong, setLyrics, slugify } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { barOffsets, chartChords, chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 
@@ -16,6 +16,7 @@ export default function SongView({ slug }: { slug: string }) {
   const [transpose, setTranspose] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [editingChart, setEditingChart] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   if (!song) {
     return (
@@ -167,16 +168,31 @@ export default function SongView({ slug }: { slug: string }) {
             <button type="button" className="chip" onClick={() => setEditingChart(true)}>
               Edit the chart
             </button>
-            <button
-              type="button"
-              className="chip text-bone-dim"
-              onClick={() => {
-                removeSong(song.slug);
-                router.push("/songs");
-              }}
-            >
-              Delete
-            </button>
+            {confirming ? (
+              <>
+                <button
+                  type="button"
+                  className="chip"
+                  style={{ borderColor: "var(--color-bone)", color: "var(--color-bone)" }}
+                  onClick={() => {
+                    removeSong(song.slug);
+                    router.push("/songs");
+                  }}
+                >
+                  Yes, delete it
+                </button>
+                <button type="button" className="chip" onClick={() => setConfirming(false)}>
+                  Keep it
+                </button>
+                <span className="text-[13px] leading-relaxed text-bone-dim">
+                  {lyrics ? "The words go with it, on every device. " : ""}This cannot be undone.
+                </span>
+              </>
+            ) : (
+              <button type="button" className="chip text-bone-dim" onClick={() => setConfirming(true)}>
+                Delete
+              </button>
+            )}
           </>
         ) : (
           <>
@@ -191,8 +207,19 @@ export default function SongView({ slug }: { slug: string }) {
             >
               Make a copy I can edit
             </button>
-            <span className="text-[13px] text-bone-dim">
-              This one ships with the app, so it cannot be changed. A copy is yours to do anything with.
+            <button
+              type="button"
+              className="chip text-bone-dim"
+              onClick={() => {
+                hideSeeded(song.slug);
+                router.push("/songs");
+              }}
+            >
+              Hide from my library
+            </button>
+            <span className="text-[13px] leading-relaxed text-bone-dim">
+              This one ships with the app, so it cannot be edited or deleted. Copy it to make it yours, or hide it to
+              get it out of the list.
             </span>
           </>
         )}

@@ -23,6 +23,13 @@ export type Library = {
   ownerId: string | null;
   /** When this browser last agreed with the database. */
   syncedAt: number;
+  /**
+   * Deletions, keyed the same way as touched. Without these a delete never
+   * reaches the database and the next sync pulls the song straight back down.
+   */
+  deleted: Record<string, number>;
+  /** Seeded songs you would rather not see. They cannot be deleted, only hidden. */
+  hidden: string[];
   /** Lyrics keyed by song slug. */
   lyrics: Record<string, string>;
   /** Songs you added yourself. */
@@ -37,7 +44,7 @@ export type Library = {
 };
 
 const KEY = "position:songs:v1";
-const EMPTY: Library = { ownerId: null, syncedAt: 0, lyrics: {}, own: [], sets: [], touched: {} };
+const EMPTY: Library = { ownerId: null, syncedAt: 0, lyrics: {}, own: [], sets: [], touched: {}, deleted: {}, hidden: [] };
 
 let cache: Library | null = null;
 const listeners = new Set<() => void>();
@@ -51,6 +58,8 @@ function read(): Library {
     return {
       ownerId: parsed.ownerId ?? null,
       syncedAt: parsed.syncedAt ?? 0,
+      deleted: parsed.deleted ?? {},
+      hidden: Array.isArray(parsed.hidden) ? parsed.hidden : [],
       lyrics: parsed.lyrics ?? {},
       own: Array.isArray(parsed.own) ? parsed.own : [],
       sets: Array.isArray(parsed.sets) ? parsed.sets : [],
@@ -116,22 +125,43 @@ export function removeSong(slug: string) {
   const current = getSnapshot();
   const lyrics = { ...current.lyrics };
   delete lyrics[slug];
+  const now = Date.now();
   write({
     ...current,
     lyrics,
     own: current.own.filter((entry) => entry.slug !== slug),
     // A deleted song must not leave a hole in a set that still lists it.
     sets: current.sets.map((set) => ({ ...set, slugs: set.slugs.filter((entry) => entry !== slug) })),
+    // Remembered as a deletion so the next sync removes it from the database
+    // rather than pulling it back down.
+    deleted: { ...current.deleted, [`songs:${slug}`]: now, [`lyrics:${slug}`]: now },
   });
 }
 
-/** The seeded charts and yours, in one list. */
+/** A seeded chart cannot be deleted, since it is code, but it can be put away. */
+export function hideSeeded(slug: string) {
+  const current = getSnapshot();
+  if (current.hidden.includes(slug)) return;
+  write({ ...current, hidden: [...current.hidden, slug] });
+}
+
+export function unhideSeeded(slug: string) {
+  const current = getSnapshot();
+  write({ ...current, hidden: current.hidden.filter((entry) => entry !== slug) });
+}
+
+/** The seeded charts and yours, in one list, minus anything put away. */
 export function allSongs(library: Library): Song[] {
+  return [...SEEDED_SONGS.filter((song) => !library.hidden.includes(song.slug)), ...library.own];
+}
+
+/** Including the ones put away, for the page that offers them back. */
+export function allSongsIncludingHidden(library: Library): Song[] {
   return [...SEEDED_SONGS, ...library.own];
 }
 
 export function findSong(library: Library, slug: string): Song | undefined {
-  return allSongs(library).find((song) => song.slug === slug);
+  return allSongsIncludingHidden(library).find((song) => song.slug === slug);
 }
 
 export function findSet(library: Library, id: string): SetList | undefined {
@@ -150,7 +180,11 @@ export function saveSet(set: SetList) {
 
 export function removeSet(id: string) {
   const current = getSnapshot();
-  write({ ...current, sets: current.sets.filter((set) => set.id !== id) });
+  write({
+    ...current,
+    sets: current.sets.filter((set) => set.id !== id),
+    deleted: { ...current.deleted, [`sets:${id}`]: Date.now() },
+  });
 }
 
 /** Ids only have to be unique in one browser, so counting is enough. */
