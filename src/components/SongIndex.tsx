@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useLibrary } from "@/hooks/useLibrary";
-import { allSongs, unhideSeeded } from "@/lib/songStore";
+import { allSongs, isSeeded, unhideSeeded } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { chartChords, numberingOf } from "@/lib/nashville";
 
@@ -23,7 +23,7 @@ export default function SongIndex() {
           song,
           numbers: chords.map((token) => token.raw).join(" "),
           key: `${KEYS[song.root]}${song.tonality === "minor" ? " minor" : " major"}`,
-          mine: library.own.some((entry) => entry.slug === song.slug),
+          mine: !isSeeded(song.slug),
           hasLyrics: Boolean(library.lyrics[song.slug]?.trim()),
         };
       })
@@ -56,8 +56,20 @@ export default function SongIndex() {
         </p>
       ) : (
         <ul className="mt-4 overflow-hidden rounded-xl border border-line">
-          {rows.map(({ song, numbers, key, mine, hasLyrics }) => (
-            <li key={song.slug} className="border-b border-line last:border-b-0">
+          {rows.map(({ song, numbers, key, mine, hasLyrics }, index) => (
+            <Fragment key={song.slug}>
+              {/* One heading where yours end and the starter charts begin. */}
+              {!mine && (index === 0 || rows[index - 1].mine) && rows.some((row) => row.mine) ? (
+                <li className="border-b border-line bg-ink px-4 py-2">
+                  <span className="label">Starter charts</span>
+                </li>
+              ) : null}
+              {mine && index === 0 ? (
+                <li className="border-b border-line bg-ink px-4 py-2">
+                  <span className="label">Your songs</span>
+                </li>
+              ) : null}
+            <li className="border-b border-line last:border-b-0">
               <Link
                 href={`/songs/${song.slug}`}
                 className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-panel px-4 py-3 transition-colors hover:bg-board"
@@ -74,6 +86,7 @@ export default function SongIndex() {
                 <span className="w-[76px] flex-none text-right font-mono text-[12px] text-bone-dim">{key}</span>
               </Link>
             </li>
+            </Fragment>
           ))}
         </ul>
       )}

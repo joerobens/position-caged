@@ -22,6 +22,11 @@ export function getSupabase(): SupabaseClient | null {
   return client;
 }
 
+/**
+ * What comes back from a read. The database sets updated_at, so it is always
+ * present here and never sent on a write: the two shapes are kept apart so a
+ * push cannot accidentally claim to know when something changed.
+ */
 export type RemoteSong = {
   user_id: string;
   slug: string;
@@ -39,6 +44,7 @@ export type RemoteSong = {
 };
 
 export type RemoteLyric = { user_id: string; slug: string; body: string; updated_at: string };
+
 export type RemoteSet = {
   user_id: string;
   id: string;
@@ -47,3 +53,8 @@ export type RemoteSet = {
   note: string | null;
   updated_at: string;
 };
+
+/** What a push sends. */
+export type SongInsert = Omit<RemoteSong, "updated_at">;
+export type LyricInsert = Omit<RemoteLyric, "updated_at">;
+export type SetInsert = Omit<RemoteSet, "updated_at">;

@@ -1,5 +1,13 @@
 import { claimLibrary, getSnapshot, markSynced, mergeFromRemote, type Library } from "./songStore";
-import { getSupabase, type RemoteLyric, type RemoteSet, type RemoteSong } from "./supabase";
+import {
+  getSupabase,
+  type LyricInsert,
+  type RemoteLyric,
+  type RemoteSet,
+  type RemoteSong,
+  type SetInsert,
+  type SongInsert,
+} from "./supabase";
 import type { Song } from "./songs";
 
 /**
@@ -44,9 +52,9 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
     touched: { ...local.touched },
   };
   let pulled = 0;
-  const pushSongs: RemoteSong[] = [];
-  const pushLyrics: RemoteLyric[] = [];
-  const pushSets: RemoteSet[] = [];
+  const pushSongs: SongInsert[] = [];
+  const pushLyrics: LyricInsert[] = [];
+  const pushSets: SetInsert[] = [];
 
   // Anything the database has that is newer than the copy here comes down.
   const wasDeleted = (key: string, at: string) => (local.deleted[key] ?? 0) > Date.parse(at);
@@ -110,13 +118,12 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
       bpm: song.bpm ?? null,
       chart: song.chart,
       note: song.note ?? null,
-      updated_at: new Date(at).toISOString(),
     });
   }
   for (const [slug, body] of Object.entries(local.lyrics)) {
     const at = local.touched[`lyrics:${slug}`] ?? 0;
     if (at <= (remoteLyricAt.get(slug) ?? -1)) continue;
-    pushLyrics.push({ user_id: userId, slug, body, updated_at: new Date(at).toISOString() });
+    pushLyrics.push({ user_id: userId, slug, body });
   }
   for (const set of local.sets) {
     const at = local.touched[`sets:${set.id}`] ?? 0;
@@ -127,7 +134,6 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
       name: set.name,
       slugs: set.slugs,
       note: set.note ?? null,
-      updated_at: new Date(at).toISOString(),
     });
   }
 
@@ -155,22 +161,44 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
     if (error) throw new Error(error.message);
   }
 
+  /*
+   * The database stamps updated_at, so a push has to read back what it decided
+   * and record that as the local time. Otherwise the local clock says one thing,
+   * the row says another, and the next sync pulls back everything it just sent.
+   */
   if (pushSongs.length) {
-    const { error } = await supabase.from("guitar_songs").upsert(pushSongs, { onConflict: "user_id,slug" });
+    const { data, error } = await supabase
+      .from("guitar_songs")
+      .upsert(pushSongs, { onConflict: "user_id,slug" })
+      .select("slug, updated_at");
     if (error) throw new Error(error.message);
+    for (const row of data ?? []) next.touched[`songs:${row.slug}`] = Date.parse(row.updated_at);
   }
   if (pushLyrics.length) {
-    const { error } = await supabase.from("guitar_lyrics").upsert(pushLyrics, { onConflict: "user_id,slug" });
+    const { data, error } = await supabase
+      .from("guitar_lyrics")
+      .upsert(pushLyrics, { onConflict: "user_id,slug" })
+      .select("slug, updated_at");
     if (error) throw new Error(error.message);
+    for (const row of data ?? []) next.touched[`lyrics:${row.slug}`] = Date.parse(row.updated_at);
   }
   if (pushSets.length) {
-    const { error } = await supabase.from("guitar_sets").upsert(pushSets, { onConflict: "user_id,id" });
+    const { data, error } = await supabase
+      .from("guitar_sets")
+      .upsert(pushSets, { onConflict: "user_id,id" })
+      .select("id, updated_at");
     if (error) throw new Error(error.message);
+    for (const row of data ?? []) next.touched[`sets:${row.id}`] = Date.parse(row.updated_at);
   }
 
   const at = Date.now();
-  if (pulled) mergeFromRemote(next);
+  // A push rewrote local timestamps, so the merged copy is always written back.
+  mergeFromRemote(next);
   markSynced(at);
+  for (const slug of gone.songs) delete next.deleted[`songs:${slug}`];
+  for (const slug of gone.lyrics) delete next.deleted[`lyrics:${slug}`];
+  for (const id of gone.sets) delete next.deleted[`sets:${id}`];
+
   const removed = gone.songs.length + gone.lyrics.length + gone.sets.length;
   return { pulled, pushed: pushSongs.length + pushLyrics.length + pushSets.length + removed, at, claim };
 }

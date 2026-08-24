@@ -150,14 +150,22 @@ export function unhideSeeded(slug: string) {
   write({ ...current, hidden: current.hidden.filter((entry) => entry !== slug) });
 }
 
-/** The seeded charts and yours, in one list, minus anything put away. */
+/**
+ * Yours first, always. What you added is what you are working on; the seeded
+ * charts are a starting point you have already moved past the moment you add
+ * anything of your own.
+ */
 export function allSongs(library: Library): Song[] {
-  return [...SEEDED_SONGS.filter((song) => !library.hidden.includes(song.slug)), ...library.own];
+  return [...library.own, ...SEEDED_SONGS.filter((song) => !library.hidden.includes(song.slug))];
 }
 
 /** Including the ones put away, for the page that offers them back. */
 export function allSongsIncludingHidden(library: Library): Song[] {
-  return [...SEEDED_SONGS, ...library.own];
+  return [...library.own, ...SEEDED_SONGS];
+}
+
+export function isSeeded(slug: string): boolean {
+  return SEEDED_SONGS.some((song) => song.slug === slug);
 }
 
 export function findSong(library: Library, slug: string): Song | undefined {
