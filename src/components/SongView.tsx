@@ -1,17 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLibrary } from "@/hooks/useLibrary";
-import { findSong, setLyrics } from "@/lib/songStore";
+import SongForm from "@/components/SongForm";
+import { addSong, findSong, removeSong, setLyrics, slugify } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { barOffsets, chartChords, chordName, numberingOf, parseChord } from "@/lib/nashville";
 
 export default function SongView({ slug }: { slug: string }) {
   const library = useLibrary();
+  const router = useRouter();
   const song = findSong(library, slug);
   const [transpose, setTranspose] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editingChart, setEditingChart] = useState(false);
 
   if (!song) {
     return (
@@ -32,6 +36,7 @@ export default function SongView({ slug }: { slug: string }) {
   const lyrics = library.lyrics[song.slug] ?? "";
   // A minor chart is numbered from its relative major, so that is what the
   // numbers are counted and spelled against.
+  const mine = library.own.some((entry) => entry.slug === song.slug);
   const numbering = numberingOf(song);
   const spellRoot = (root + (numbering.relative ? 3 : 0)) % 12;
   const chords = chartChords(
@@ -69,6 +74,20 @@ export default function SongView({ slug }: { slug: string }) {
         <p className="mt-3 max-w-[74ch] text-[13px] leading-relaxed text-bone-dim">{song.note}</p>
       ) : null}
 
+      {editingChart ? (
+        <div className="mt-5">
+          <SongForm
+            initial={song}
+            submitLabel="Save the changes"
+            onCancel={() => setEditingChart(false)}
+            onSave={(next) => {
+              addSong({ ...next, slug: song.slug });
+              setEditingChart(false);
+            }}
+          />
+        </div>
+      ) : (
+      <>
       {/* the chart, which is the reminder you actually need on a stand */}
       <section className="panel mt-5" aria-label="Chart">
         {song.chart.map((section) => (
@@ -124,6 +143,46 @@ export default function SongView({ slug }: { slug: string }) {
           </button>
         ))}
       </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {mine ? (
+          <>
+            <button type="button" className="chip" onClick={() => setEditingChart(true)}>
+              Edit the chart
+            </button>
+            <button
+              type="button"
+              className="chip text-bone-dim"
+              onClick={() => {
+                removeSong(song.slug);
+                router.push("/songs");
+              }}
+            >
+              Delete
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="chip"
+              onClick={() => {
+                const copy = slugify(`${song.title} mine`, library);
+                addSong({ ...song, slug: copy, credit: song.credit });
+                router.push(`/songs/${copy}`);
+              }}
+            >
+              Make a copy I can edit
+            </button>
+            <span className="text-[13px] text-bone-dim">
+              This one ships with the app, so it cannot be changed. A copy is yours to do anything with.
+            </span>
+          </>
+        )}
+      </div>
+
+      </>
+      )}
 
       {/* your words, kept in this browser */}
       <section className="panel mt-6" aria-label="Lyrics">
