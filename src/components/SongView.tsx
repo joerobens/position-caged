@@ -129,9 +129,20 @@ export default function SongView({ slug }: { slug: string }) {
       <section className="panel mt-6" aria-label="Lyrics">
         <div className="flex items-center gap-2">
           <span className="label">Lyrics</span>
-          <button type="button" className="chip chip-sm ml-auto" onClick={() => setEditing((current) => !current)}>
-            {editing ? "Done" : lyrics ? "Edit" : "Add"}
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            {lyrics ? (
+              <Link
+                href={`/songs/${song.slug}/play`}
+                className="chip chip-sm"
+                style={{ background: "var(--accent)", borderColor: "var(--accent)", color: "var(--color-ink)", fontWeight: 500 }}
+              >
+                Put it on the stand
+              </Link>
+            ) : null}
+            <button type="button" className="chip chip-sm" onClick={() => setEditing((current) => !current)}>
+              {editing ? "Done" : lyrics ? "Edit" : "Add"}
+            </button>
+          </div>
         </div>
         {editing ? (
           <>

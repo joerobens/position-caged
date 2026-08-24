@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react";
+import LibraryBackup from "@/components/LibraryBackup";
 import { useLibrary } from "@/hooks/useLibrary";
 import { allSongs } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
@@ -86,6 +87,8 @@ export default function SongIndex() {
           Charts here are traditional. Anything you add, and any lyrics you paste, stay in this browser.
         </span>
       </div>
+
+      <LibraryBackup />
     </>
   );
 }

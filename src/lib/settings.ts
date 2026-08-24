@@ -44,6 +44,8 @@ export type Settings = {
   showScale: boolean;
   /** Follow the system, or override it. */
   theme: ThemePreference;
+  /** Lyric size on the stand, in pixels. */
+  lyricSize: number;
   /** Reading the neck, or playing to the clock. */
   mode: Mode;
   drill: Drill;
@@ -81,6 +83,7 @@ export const DEFAULT_SETTINGS: Settings = {
   chordBar: 0,
   showScale: true,
   theme: "system",
+  lyricSize: 26,
   mode: "learn",
   drill: "caged",
   spiderStartFret: 5,
