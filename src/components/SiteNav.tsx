@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { CircleHalf, Moon, Sun, UserCircle } from "@phosphor-icons/react";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
-import { useSession } from "@/hooks/useSession";
+import { useSync } from "@/hooks/useSync";
 import { syncConfigured } from "@/lib/supabase";
 import type { ThemePreference } from "@/lib/theme";
 
@@ -29,7 +29,7 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
   const pathname = usePathname();
   const { settings, update } = useSettings();
   useTheme(settings.theme);
-  const { session, ready } = useSession();
+  const sync = useSync();
   const Icon = settings.theme === "light" ? Sun : settings.theme === "dark" ? Moon : CircleHalf;
 
   return (
@@ -63,11 +63,17 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
         {syncConfigured ? (
           <Link
             href="/account"
-            aria-label={session ? `Signed in as ${session.user.email}` : "Sign in"}
+            aria-label={sync.active ? `Signed in as ${sync.email}` : "Sign in"}
             className="chip ml-auto flex flex-none items-center gap-2 px-3"
           >
-            <UserCircle size={17} weight={session ? "fill" : "bold"} style={session ? { color: "var(--accent)" } : undefined} />
-            <span className="hidden text-[13px] sm:inline">{!ready ? "\u2026" : session ? "Synced" : "Sign in"}</span>
+            <UserCircle
+              size={17}
+              weight={sync.active ? "fill" : "bold"}
+              style={sync.active && !sync.pending && !sync.problem ? { color: "var(--accent)" } : undefined}
+            />
+            <span className="hidden text-[13px] sm:inline">
+              {!sync.active ? "Sign in" : sync.problem ? "Offline" : sync.busy ? "Syncing" : sync.pending ? `${sync.pending} to sync` : "Synced"}
+            </span>
           </Link>
         ) : null}
         <button

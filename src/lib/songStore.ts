@@ -15,6 +15,14 @@ export type SetList = {
 };
 
 export type Library = {
+  /**
+   * Whose library this browser is holding. Null means nobody has signed in yet.
+   * Without this, signing out and signing in as someone else would push your
+   * songs into their account, which on a shared project is not hypothetical.
+   */
+  ownerId: string | null;
+  /** When this browser last agreed with the database. */
+  syncedAt: number;
   /** Lyrics keyed by song slug. */
   lyrics: Record<string, string>;
   /** Songs you added yourself. */
@@ -29,7 +37,7 @@ export type Library = {
 };
 
 const KEY = "position:songs:v1";
-const EMPTY: Library = { lyrics: {}, own: [], sets: [], touched: {} };
+const EMPTY: Library = { ownerId: null, syncedAt: 0, lyrics: {}, own: [], sets: [], touched: {} };
 
 let cache: Library | null = null;
 const listeners = new Set<() => void>();
@@ -41,6 +49,8 @@ function read(): Library {
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<Library>;
     return {
+      ownerId: parsed.ownerId ?? null,
+      syncedAt: parsed.syncedAt ?? 0,
       lyrics: parsed.lyrics ?? {},
       own: Array.isArray(parsed.own) ? parsed.own : [],
       sets: Array.isArray(parsed.sets) ? parsed.sets : [],
@@ -172,4 +182,45 @@ export function slugify(title: string, library: Library): string {
   let n = 2;
   while (taken.has(`${base}-${n}`)) n++;
   return `${base}-${n}`;
+}
+
+/**
+ * Work out whose library this is before syncing anything.
+ *
+ * Three cases. Nobody has signed in here, so the work belongs to whoever just
+ * did. The same person is back, so carry on. Or somebody else is signing in on
+ * this browser, in which case their account must not inherit the last person's
+ * songs: the local copy is dropped and theirs is pulled down instead.
+ */
+export function claimLibrary(userId: string): "adopted" | "resumed" | "switched" {
+  const current = getSnapshot();
+  if (current.ownerId === userId) return "resumed";
+
+  if (current.ownerId === null) {
+    // Everything here is unsynced by definition, so stamp it all to push up.
+    const touched = { ...current.touched };
+    const now = Date.now();
+    for (const song of current.own) touched[`songs:${song.slug}`] ??= now;
+    for (const slug of Object.keys(current.lyrics)) touched[`lyrics:${slug}`] ??= now;
+    for (const set of current.sets) touched[`sets:${set.id}`] ??= now;
+    write({ ...current, ownerId: userId, syncedAt: 0, touched });
+    return "adopted";
+  }
+
+  write({ ...EMPTY, ownerId: userId });
+  return "switched";
+}
+
+/** Back to an empty anonymous library, so the next person starts clean. */
+export function releaseLibrary() {
+  write({ ...EMPTY });
+}
+
+export function markSynced(at: number) {
+  write({ ...getSnapshot(), syncedAt: at });
+}
+
+/** Rows changed here since the last agreement with the database. */
+export function pendingCount(library: Library): number {
+  return Object.values(library.touched).filter((at) => at > library.syncedAt).length;
 }

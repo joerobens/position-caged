@@ -1,4 +1,4 @@
-import { getSnapshot, mergeFromRemote, type Library } from "./songStore";
+import { claimLibrary, getSnapshot, markSynced, mergeFromRemote, type Library } from "./songStore";
 import { getSupabase, type RemoteLyric, type RemoteSet, type RemoteSong } from "./supabase";
 import type { Song } from "./songs";
 
@@ -13,7 +13,7 @@ import type { Song } from "./songs";
  * person on two devices and the wrong answer for a band sharing a library. If
  * this ever grows past one person that needs revisiting.
  */
-export type SyncResult = { pulled: number; pushed: number; at: number };
+export type SyncResult = { pulled: number; pushed: number; at: number; claim: "adopted" | "resumed" | "switched" };
 
 const isNewer = (local: number | undefined, remote: string) => (local ?? 0) > Date.parse(remote);
 
@@ -21,6 +21,8 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("Sync is not configured.");
 
+  // Settle whose library this is before a single row moves in either direction.
+  const claim = claimLibrary(userId);
   const local = getSnapshot();
   const [songs, lyrics, sets] = await Promise.all([
     supabase.from("guitar_songs").select("*").eq("user_id", userId),
@@ -35,6 +37,7 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
   const remoteSets = (sets.data ?? []) as RemoteSet[];
 
   const next: Library = {
+    ...local,
     own: [...local.own],
     lyrics: { ...local.lyrics },
     sets: [...local.sets],
@@ -136,6 +139,8 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
     if (error) throw new Error(error.message);
   }
 
+  const at = Date.now();
   if (pulled) mergeFromRemote(next);
-  return { pulled, pushed: pushSongs.length + pushLyrics.length + pushSets.length, at: Date.now() };
+  markSynced(at);
+  return { pulled, pushed: pushSongs.length + pushLyrics.length + pushSets.length, at, claim };
 }
