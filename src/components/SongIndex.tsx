@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import LibraryBackup from "@/components/LibraryBackup";
+import SyncPanel from "@/components/SyncPanel";
 import { useLibrary } from "@/hooks/useLibrary";
 import { allSongs } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
@@ -88,6 +89,7 @@ export default function SongIndex() {
         </span>
       </div>
 
+      <SyncPanel />
       <LibraryBackup />
     </>
   );

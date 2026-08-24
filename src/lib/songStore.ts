@@ -21,10 +21,15 @@ export type Library = {
   own: Song[];
   /** Sets you have put together. */
   sets: SetList[];
+  /**
+   * When each row was last changed here, so a sync can tell which side is newer
+   * without a server round trip. Keyed "songs:slug", "lyrics:slug", "sets:id".
+   */
+  touched: Record<string, number>;
 };
 
 const KEY = "position:songs:v1";
-const EMPTY: Library = { lyrics: {}, own: [], sets: [] };
+const EMPTY: Library = { lyrics: {}, own: [], sets: [], touched: {} };
 
 let cache: Library | null = null;
 const listeners = new Set<() => void>();
@@ -39,6 +44,7 @@ function read(): Library {
       lyrics: parsed.lyrics ?? {},
       own: Array.isArray(parsed.own) ? parsed.own : [],
       sets: Array.isArray(parsed.sets) ? parsed.sets : [],
+      touched: parsed.touched ?? {},
     };
   } catch {
     return EMPTY;
@@ -73,14 +79,27 @@ export function getServerSnapshot(): Library {
 
 export function setLyrics(slug: string, lyrics: string) {
   const current = getSnapshot();
-  const next = { ...current, lyrics: { ...current.lyrics, [slug]: lyrics } };
+  const next = { ...current, lyrics: { ...current.lyrics, [slug]: lyrics }, touched: stamp(current, `lyrics:${slug}`) };
   if (!lyrics.trim()) delete next.lyrics[slug];
+  write(next);
+}
+
+function stamp(library: Library, key: string): Record<string, number> {
+  return { ...library.touched, [key]: Date.now() };
+}
+
+/** Applies rows that came back from the database without restamping them. */
+export function mergeFromRemote(next: Library) {
   write(next);
 }
 
 export function addSong(song: Song) {
   const current = getSnapshot();
-  write({ ...current, own: [...current.own.filter((entry) => entry.slug !== song.slug), song] });
+  write({
+    ...current,
+    own: [...current.own.filter((entry) => entry.slug !== song.slug), song],
+    touched: stamp(current, `songs:${song.slug}`),
+  });
 }
 
 export function removeSong(slug: string) {
@@ -115,6 +134,7 @@ export function saveSet(set: SetList) {
   write({
     ...current,
     sets: existing ? current.sets.map((entry) => (entry.id === set.id ? set : entry)) : [...current.sets, set],
+    touched: stamp(current, `sets:${set.id}`),
   });
 }
 
