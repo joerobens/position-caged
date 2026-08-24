@@ -7,7 +7,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import SongForm from "@/components/SongForm";
 import { addSong, findSong, removeSong, setLyrics, slugify } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
-import { barOffsets, chartChords, chordName, numberingOf, parseChord } from "@/lib/nashville";
+import { barOffsets, chartChords, chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 
 export default function SongView({ slug }: { slug: string }) {
   const library = useLibrary();
@@ -39,11 +39,15 @@ export default function SongView({ slug }: { slug: string }) {
   const mine = library.own.some((entry) => entry.slug === song.slug);
   const numbering = numberingOf(song);
   const spellRoot = (root + (numbering.relative ? 3 : 0)) % 12;
+  // With a capo on, the chord you finger is not the chord that sounds. The shapes
+  // are what you need in front of you, so those are what the chart shows.
+  const capo = song.capo ?? 0;
+  const playRoot = shapeRoot(spellRoot, capo);
   const chords = chartChords(
     song.chart.flatMap((section) => section.bars),
     numbering.steps,
   );
-  const practiceHref = `/play?mode=practice&drill=changes&key=${root}&tonality=${song.tonality}&bars=${encodeURIComponent(
+  const practiceHref = `/play?mode=practice&drill=changes&key=${shapeRoot(root, capo)}&tonality=${song.tonality}&bars=${encodeURIComponent(
     barOffsets(song.chart[0].bars, numbering.steps)
       .map((offset) => (offset + (numbering.relative ? 3 : 0)) % 12)
       .join(","),
@@ -65,7 +69,12 @@ export default function SongView({ slug }: { slug: string }) {
           key <b className="font-medium text-bone">{KEYS[root]} {song.tonality}</b>
           {transpose !== null && transpose !== song.root ? ` (written in ${KEYS[song.root]})` : ""}
         </span>
-        {song.capo ? <span>capo <b className="font-medium text-bone">{song.capo}</b></span> : null}
+        {capo ? (
+          <span>
+            capo <b className="font-medium text-bone">{capo}</b>, so you play in{" "}
+            <b className="font-medium text-bone">{KEYS[shapeRoot(root, capo)]}</b>
+          </span>
+        ) : null}
         {song.feel ? <span>feel <b className="font-medium text-bone">{song.feel}</b></span> : null}
         {song.bpm ? <span><b className="font-medium text-bone">{song.bpm}</b> bpm</span> : null}
       </div>
@@ -103,7 +112,7 @@ export default function SongView({ slug }: { slug: string }) {
                   >
                     <div className="font-mono text-[15px] font-medium">{bar}</div>
                     <div className="mt-0.5 font-mono text-[10px] text-bone-dim">
-                      {token && !token.hold ? chordName(token, spellRoot) : " "}
+                      {token && !token.hold ? chordName(token, playRoot) : " "}
                     </div>
                   </div>
                 );
@@ -114,12 +123,20 @@ export default function SongView({ slug }: { slug: string }) {
       </section>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-[13px] text-bone-dim">In {KEYS[root]} that is</span>
+        <span className="text-[13px] text-bone-dim">
+          {capo ? `Behind the capo you play` : `In ${KEYS[root]} that is`}
+        </span>
         {chords.map((token) => (
           <span key={token.raw} className="chip chip-sm font-mono">
-            {token.raw} = {chordName(token, spellRoot)}
+            {token.raw} = {chordName(token, playRoot)}
           </span>
         ))}
+        {capo ? (
+          <span className="w-full text-[13px] leading-relaxed text-bone-dim">
+            Sounding in <b className="font-medium text-bone">{KEYS[root]} {song.tonality}</b>, which is what anyone
+            playing along without a capo needs to know.
+          </span>
+        ) : null}
         <Link
           href={practiceHref}
           className="chip ml-auto"

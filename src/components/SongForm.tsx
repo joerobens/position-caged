@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { KEYS, type Tonality } from "@/lib/music";
 import { chartToText, textToChart } from "@/lib/chartText";
-import { chordName, numberingOf, parseChord } from "@/lib/nashville";
+import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 import type { Song } from "@/lib/songs";
 
 /** Create and edit are the same form, so a chart cannot be writable once and never again. */
@@ -30,6 +30,8 @@ export default function SongForm({
 
   const chart = textToChart(text);
   const counting = numberingOf({ root, tonality, numbering });
+  const capoFret = capo ? Number(capo) : 0;
+  const playRoot = shapeRoot(counting.root, capoFret);
   const tokens = chart.flatMap((section) => section.bars);
   const unknown = tokens.filter((bar) => parseChord(bar, counting.steps) === null);
   const ready = Boolean(title.trim()) && chart.length > 0 && unknown.length === 0;
@@ -81,6 +83,13 @@ export default function SongForm({
             </button>
           ))}
         </div>
+        {capoFret ? (
+          <p className="text-[13px] leading-relaxed text-bone-dim">
+            With a capo at {capoFret} you will be holding{" "}
+            <b className="font-medium text-bone">{KEYS[shapeRoot(root, capoFret)]}</b> shapes. Put the key the song
+            sounds in here and the chart works out the rest.
+          </p>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
           <div className="segmented w-fit">
             {(["major", "minor"] as const).map((value) => (
@@ -150,16 +159,18 @@ export default function SongForm({
 
       <div className="rounded-xl border border-line bg-ink p-3">
         <span className="label">
-          In {KEYS[counting.root]} that reads{counting.relative ? ", counted from the relative major" : ""}
+          {capoFret
+            ? `Behind the capo you play`
+            : `In ${KEYS[counting.root]} that reads${counting.relative ? ", counted from the relative major" : ""}`}
         </span>
-        {chart.map((section) => (
-          <p key={section.name} className="mt-2 font-mono text-[14px] leading-relaxed">
+        {chart.map((section, index) => (
+          <p key={index} className="mt-2 font-mono text-[14px] leading-relaxed">
             <span className="text-bone-dim">{section.name}: </span>
             <span style={{ color: unknown.length ? "var(--color-bone-dim)" : "var(--accent)" }}>
               {section.bars
                 .map((bar) => {
                   const token = parseChord(bar, counting.steps);
-                  return token && !token.hold ? chordName(token, counting.root) : bar;
+                  return token && !token.hold ? chordName(token, playRoot) : bar;
                 })
                 .join("  ")}
             </span>

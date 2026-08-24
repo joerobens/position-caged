@@ -10,7 +10,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { findSet, findSong } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
-import { chordName, numberingOf, parseChord } from "@/lib/nashville";
+import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 
 const MIN_SIZE = 18;
 const MAX_SIZE = 56;
@@ -80,6 +80,8 @@ export default function StageView({ slug }: { slug: string }) {
   }
 
   const numbering = numberingOf(song);
+  // On a stand you need the shape under your fingers, not the concert pitch.
+  const playRoot = shapeRoot(numbering.root, song.capo);
   const size = Math.min(MAX_SIZE, Math.max(MIN_SIZE, settings.lyricSize));
   const resize = (delta: number) => update({ lyricSize: Math.min(MAX_SIZE, Math.max(MIN_SIZE, size + delta)) });
 
@@ -101,8 +103,9 @@ export default function StageView({ slug }: { slug: string }) {
           </span>
         ) : null}
         <span className="font-mono text-[13px] text-bone-dim">
-          {KEYS[song.root]} {song.tonality}
-          {song.capo ? ` · capo ${song.capo}` : ""}
+          {song.capo
+            ? `capo ${song.capo} · ${KEYS[shapeRoot(song.root, song.capo)]} shapes · sounds ${KEYS[song.root]}`
+            : `${KEYS[song.root]} ${song.tonality}`}
         </span>
         <div className="ml-auto flex flex-none items-center gap-2">
           <button type="button" className="chip px-3" aria-label="Smaller text" onClick={() => resize(-3)}>
@@ -131,7 +134,7 @@ export default function StageView({ slug }: { slug: string }) {
                       key={index}
                       className="min-w-[52px] rounded-md border border-line px-2 py-1 text-center font-mono text-[14px] font-medium"
                     >
-                      {token && !token.hold ? chordName(token, numbering.root) : bar}
+                      {token && !token.hold ? chordName(token, playRoot) : bar}
                     </span>
                   );
                 })}

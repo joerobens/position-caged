@@ -149,3 +149,15 @@ export function numberingOf(song: Pick<Song, "root" | "tonality" | "numbering">)
   }
   return { root: song.root, steps: song.tonality, relative: false };
 }
+
+/**
+ * Where your hands actually are.
+ *
+ * A capo separates the key a song sounds in from the shapes you hold. Capo three
+ * and G shapes sounds in B flat, so the chart has to be able to say both: B flat
+ * is what the band calls it, G is what your fingers do. The numbers never move,
+ * which is the whole reason a number chart survives a capo at all.
+ */
+export function shapeRoot(root: number, capo?: number | null): number {
+  return (((root - (capo ?? 0)) % 12) + 12) % 12;
+}
