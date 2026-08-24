@@ -8,17 +8,28 @@ import { getSupabase, syncConfigured } from "@/lib/supabase";
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(!syncConfigured);
+  const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase) return;
     let live = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!live) return;
-      setSession(data.session);
-      setReady(true);
-    });
+    // Whatever happens, stop saying "checking". Sitting on that forever is worse
+    // than an error, because it looks like the feature simply is not there.
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (!live) return;
+        if (error) setProblem(error.message);
+        setSession(data.session);
+      })
+      .catch((error: unknown) => {
+        if (live) setProblem(error instanceof Error ? error.message : "Could not reach the database.");
+      })
+      .finally(() => {
+        if (live) setReady(true);
+      });
     const { data } = supabase.auth.onAuthStateChange((_event, next) => {
       if (live) setSession(next);
     });
@@ -28,5 +39,5 @@ export function useSession() {
     };
   }, []);
 
-  return { session, ready };
+  return { session, ready, problem };
 }

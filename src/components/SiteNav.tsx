@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleHalf, Moon, Sun } from "@phosphor-icons/react";
+import { CircleHalf, Moon, Sun, UserCircle } from "@phosphor-icons/react";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
+import { useSession } from "@/hooks/useSession";
+import { syncConfigured } from "@/lib/supabase";
 import type { ThemePreference } from "@/lib/theme";
 
 const LINKS = [
@@ -27,6 +29,7 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
   const pathname = usePathname();
   const { settings, update } = useSettings();
   useTheme(settings.theme);
+  const { session, ready } = useSession();
   const Icon = settings.theme === "light" ? Sun : settings.theme === "dark" ? Moon : CircleHalf;
 
   return (
@@ -55,9 +58,21 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
             );
           })}
         </div>
+        {/* Signing in was buried at the foot of one page, which is the same as not
+            being there. It belongs where you would look for it. */}
+        {syncConfigured ? (
+          <Link
+            href="/account"
+            aria-label={session ? `Signed in as ${session.user.email}` : "Sign in"}
+            className="chip ml-auto flex flex-none items-center gap-2 px-3"
+          >
+            <UserCircle size={17} weight={session ? "fill" : "bold"} style={session ? { color: "var(--accent)" } : undefined} />
+            <span className="hidden text-[13px] sm:inline">{!ready ? "\u2026" : session ? "Synced" : "Sign in"}</span>
+          </Link>
+        ) : null}
         <button
           type="button"
-          className="chip ml-auto flex flex-none items-center justify-center px-3"
+          className={`chip ${syncConfigured ? "" : "ml-auto"} flex flex-none items-center justify-center px-3`}
           aria-label={THEME_LABEL[settings.theme]}
           title={THEME_LABEL[settings.theme]}
           onClick={() =>

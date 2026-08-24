@@ -13,7 +13,7 @@ import { syncLibrary } from "@/lib/sync";
  * work, which is the point.
  */
 export default function SyncPanel() {
-  const { session, ready } = useSession();
+  const { session, ready, problem } = useSession();
   const library = useLibrary();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -71,9 +71,18 @@ export default function SyncPanel() {
   return (
     <div className="mt-5 rounded-xl border border-line bg-panel p-4">
       <span className="label">Sync</span>
-      {!ready ? (
-        <p className="mt-1.5 text-[13px] text-bone-dim">Checking&hellip;</p>
-      ) : session ? (
+      {problem ? (
+        <p className="mt-1.5 text-[13px] leading-relaxed text-bone-dim">
+          Could not reach the database: <b className="font-medium text-bone">{problem}</b>. Everything still works from
+          this browser.
+        </p>
+      ) : null}
+      {/*
+        Not signed in is the common case and the one with something to do, so the
+        form is what renders while the session resolves. A spinner here reads as
+        "this feature is missing", which is exactly how it was read.
+      */}
+      {session ? (
         <>
           <p className="mt-1.5 max-w-[70ch] text-[13px] leading-relaxed text-bone-dim">
             Signed in as <b className="font-medium text-bone">{session.user.email}</b>. Your{" "}
@@ -110,6 +119,7 @@ export default function SyncPanel() {
           <p className="mt-1.5 max-w-[70ch] text-[13px] leading-relaxed text-bone-dim">
             Sign in and your songs, words and sets follow you between devices. No password: you get a link by email.
           </p>
+          {!ready ? <p className="mt-1.5 text-[12px] text-bone-dim">Checking whether you are already signed in&hellip;</p> : null}
           <div className="mt-3 flex flex-wrap gap-2">
             <input
               type="email"
