@@ -27,6 +27,7 @@ export default function LyricsFinder({
   const [problem, setProblem] = useState<string | null>(null);
 
   const look = async () => {
+    if (!ready) return;
     setLooking(true);
     setProblem(null);
     setHits(null);
@@ -47,6 +48,8 @@ export default function LyricsFinder({
   };
 
   const empty = hits && hits.length === 0 && !problem;
+  // Nothing to search on yet, so do not offer a search that cannot work.
+  const ready = track.trim().length >= 2;
 
   return (
     <div className="flex flex-col gap-4">
@@ -54,9 +57,10 @@ export default function LyricsFinder({
         <button
           type="button"
           className="chip whitespace-nowrap"
-          data-on={looking ? undefined : "true"}
+          data-on={looking || !ready ? undefined : "true"}
           onClick={look}
-          disabled={looking}
+          disabled={looking || !ready}
+          title={ready ? undefined : "Give the song a title first"}
         >
           {looking ? "Looking…" : "Find the words"}
         </button>

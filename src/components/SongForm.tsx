@@ -3,6 +3,7 @@
 import { useState } from "react";
 import GeniusSearch from "@/components/GeniusSearch";
 import { TUNINGS, effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
+import LyricsFinder from "@/components/LyricsFinder";
 import { KEYS, type Tonality } from "@/lib/music";
 import { chartToText, textToChart } from "@/lib/chartText";
 import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
@@ -14,11 +15,16 @@ export default function SongForm({
   submitLabel,
   onSave,
   onCancel,
+  lyrics,
+  onLyrics,
 }: {
   initial?: Song;
   submitLabel: string;
   onSave: (song: Omit<Song, "slug">) => void;
   onCancel?: () => void;
+  /** Passed when the words are part of the same job, which is adding a song. */
+  lyrics?: string;
+  onLyrics?: (words: string) => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [credit, setCredit] = useState(initial?.credit ?? "");
@@ -27,6 +33,7 @@ export default function SongForm({
   const [numbering, setNumbering] = useState<"relative-major" | "tonic">(initial?.numbering ?? "relative-major");
   const [capo, setCapo] = useState(initial?.capo ? String(initial.capo) : "");
   const [tuning, setTuning] = useState(initial?.tuning ?? "standard");
+  const [pasting, setPasting] = useState(false);
   const [feel, setFeel] = useState(initial?.feel ?? "");
   const [bpm, setBpm] = useState(initial?.bpm ? String(initial.bpm) : "");
   const [text, setText] = useState(initial ? chartToText(initial.chart) : "Verse: 1 1 4 1 | 1 5 1 1");
@@ -226,6 +233,54 @@ export default function SongForm({
           </p>
         ) : null}
       </div>
+
+      {onLyrics ? (
+        <div className="flex flex-col gap-3">
+          <span className="label">Lyrics</span>
+          {lyrics || pasting ? (
+            <>
+              <textarea
+                value={lyrics ?? ""}
+                onChange={(event) => onLyrics(event.target.value)}
+                placeholder="Paste the words here."
+                autoFocus={pasting && !lyrics}
+                rows={10}
+                className="w-full rounded-xl border border-line bg-ink p-3 text-[15px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => {
+                    onLyrics("");
+                    setPasting(false);
+                  }}
+                >
+                  Clear the words
+                </button>
+                <span className="self-center text-[13px] text-bone-dim">
+                  {lyrics?.trim() ? `${lyrics.trim().split(/\s+/).length} words. Saved with the song.` : "Saved with the song."}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="max-w-[58ch] text-[13px] leading-relaxed text-bone-dim">
+                Optional, and you can add them later. They are only needed to read along on the stand.
+              </p>
+              <LyricsFinder
+                track={title}
+                artist={credit.trim().toLowerCase() === "traditional" ? "" : credit}
+                onPick={onLyrics}
+              >
+                <button type="button" className="chip whitespace-nowrap" onClick={() => setPasting(true)}>
+                  Paste them in
+                </button>
+              </LyricsFinder>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button
