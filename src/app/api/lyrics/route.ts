@@ -33,27 +33,50 @@ function fingerprint(lyrics: string): string {
   return lyrics.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+const OFF_STUDIO = /\b(live|acoustic|remix|demo|karaoke|instrumental|tribute|cover|session|unplugged)\b/;
+const NOT_AN_ALBUM = /\btop \d|\bhits\b|compilation|best of|greatest/;
+
+function plain(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 /**
- * Keep one entry per distinct set of words. A named album beats a compilation
- * or an "(instrumental)" tag, so the one we keep is the one you would recognise.
+ * How likely this is the take you meant.
+ *
+ * Searching a song by name turns up the album cut alongside every live and
+ * acoustic version of it, and those are different words: a live take carries
+ * the banter. So a title that matches exactly wins, anything announcing itself
+ * as another version loses, and a real album beats a compilation.
  */
-function distinct(hits: LyricHit[]): LyricHit[] {
+function score(hit: LyricHit, wanted: string): number {
+  let points = 0;
+  const title = plain(hit.track);
+  const album = (hit.album ?? "").toLowerCase();
+
+  if (title === plain(wanted)) points += 4;
+  else if (title.startsWith(plain(wanted))) points += 1;
+
+  if (OFF_STUDIO.test(hit.track.toLowerCase())) points -= 3;
+  if (OFF_STUDIO.test(album)) points -= 2;
+  if (NOT_AN_ALBUM.test(album)) points -= 1;
+  if (hit.instrumental) points -= 5;
+  if (album) points += 1;
+
+  return points;
+}
+
+/**
+ * Keep one entry per distinct set of words, best first, so the caller can take
+ * the first and be right most of the time.
+ */
+function distinct(hits: LyricHit[], wanted: string): LyricHit[] {
   const best = new Map<string, LyricHit>();
   for (const hit of hits) {
     const key = fingerprint(hit.lyrics);
     const held = best.get(key);
-    if (!held || score(hit) > score(held)) best.set(key, hit);
+    if (!held || score(hit, wanted) > score(held, wanted)) best.set(key, hit);
   }
-  return [...best.values()];
-}
-
-function score(hit: LyricHit): number {
-  const album = (hit.album ?? "").toLowerCase();
-  if (hit.instrumental) return 0;
-  if (!album) return 1;
-  if (/instrumental|karaoke|tribute|cover/.test(album)) return 1;
-  if (/top \d|hits|compilation|best of/.test(album)) return 2;
-  return 3;
+  return [...best.values()].sort((a, b) => score(b, wanted) - score(a, wanted));
 }
 
 export async function GET(request: Request) {
@@ -83,7 +106,10 @@ export async function GET(request: Request) {
           id: Number(row.id),
           track: String(row.trackName ?? track),
           artist: String(row.artistName ?? artist),
-          album: row.albumName ? String(row.albumName) : null,
+          // Some rows carry the literal string "null" as an album name.
+          album: /^(null|unknown|)$/i.test(String(row.albumName ?? "").trim())
+            ? null
+            : String(row.albumName),
           duration: typeof row.duration === "number" ? Math.round(row.duration) : null,
           instrumental: row.instrumental === true,
           words: lyrics.split(/\s+/).length,
@@ -91,7 +117,7 @@ export async function GET(request: Request) {
         };
       });
 
-    return NextResponse.json({ hits: distinct(hits).slice(0, MAX) });
+    return NextResponse.json({ hits: distinct(hits, track).slice(0, MAX) });
   } catch {
     return NextResponse.json({ hits: [], problem: "Could not reach the lyrics database." });
   }

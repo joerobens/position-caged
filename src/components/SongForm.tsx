@@ -36,6 +36,8 @@ export default function SongForm({
   const [capo, setCapo] = useState(initial?.capo ? String(initial.capo) : "");
   const [tuning, setTuning] = useState(initial?.tuning ?? "standard");
   const [pasting, setPasting] = useState(false);
+  // Set when a song is chosen from the search, so the words follow that choice.
+  const [chosenSong, setChosenSong] = useState("");
   const chartId = useId();
   const [feel, setFeel] = useState(initial?.feel ?? "");
   const [bpm, setBpm] = useState(initial?.bpm ? String(initial.bpm) : "");
@@ -83,6 +85,7 @@ export default function SongForm({
           setTitle(hit.title);
           setCredit(hit.artist);
           setSourceUrl(hit.url);
+          setChosenSong(`${hit.title}|${hit.artist}`);
         }}
       />
     <div className="panel flex flex-col gap-4">
@@ -253,6 +256,20 @@ export default function SongForm({
       {onLyrics ? (
         <div className="flex flex-col gap-3">
           <span className="label">Lyrics</span>
+          {/* Stays mounted after it fills, so swapping version is still one tap. */}
+          <LyricsFinder
+            track={title}
+            artist={credit.trim().toLowerCase() === "traditional" ? "" : credit}
+            onPick={onLyrics}
+            auto={chosenSong}
+          >
+            {lyrics || pasting ? null : (
+              <button type="button" className="chip whitespace-nowrap" onClick={() => setPasting(true)}>
+                Paste them in
+              </button>
+            )}
+          </LyricsFinder>
+
           {lyrics || pasting ? (
             <>
               <textarea
@@ -275,25 +292,16 @@ export default function SongForm({
                   Clear the words
                 </button>
                 <span className="self-center text-[13px] text-bone-dim">
-                  {lyrics?.trim() ? `${lyrics.trim().split(/\s+/).length} words. Saved with the song.` : "Saved with the song."}
+                  {lyrics?.trim()
+                    ? `${lyrics.trim().split(/\s+/).length} words. Saved with the song.`
+                    : "Saved with the song."}
                 </span>
               </div>
             </>
           ) : (
-            <>
-              <p className="max-w-[58ch] text-[13px] leading-relaxed text-bone-dim">
-                Optional, and you can add them later. They are only needed to read along on the stand.
-              </p>
-              <LyricsFinder
-                track={title}
-                artist={credit.trim().toLowerCase() === "traditional" ? "" : credit}
-                onPick={onLyrics}
-              >
-                <button type="button" className="chip whitespace-nowrap" onClick={() => setPasting(true)}>
-                  Paste them in
-                </button>
-              </LyricsFinder>
-            </>
+            <p className="max-w-[58ch] text-[13px] leading-relaxed text-bone-dim">
+              Optional, and you can add them later. They are only needed to read along on the stand.
+            </p>
           )}
         </div>
       ) : null}

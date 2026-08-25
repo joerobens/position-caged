@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CaretRight } from "@phosphor-icons/react";
 import type { LyricHit } from "@/app/api/lyrics/route";
 import { ICON } from "@/lib/icons";
@@ -8,23 +8,30 @@ import { ICON } from "@/lib/icons";
 /**
  * Fetches the words for a song you already have.
  *
- * One distinct set of words means no decision to make, so it just fills the
- * box. The picker only appears when the takes genuinely differ, which happens
- * with live versions and edits. Whatever lands is still yours to edit.
+ * You picked the song once already, so this does not ask again. It takes the
+ * best match, says which one it took, and offers the others only if you want
+ * them. A search for one title turns up the album cut plus every live and
+ * acoustic version, and those are different words, so the choice exists. It
+ * just is not a question worth asking twice.
  */
 export default function LyricsFinder({
   track,
   artist,
   onPick,
   children,
+  auto,
 }: {
   track: string;
   artist: string;
   onPick: (lyrics: string) => void;
   children?: ReactNode;
+  /** Changes when a song is chosen upstream, which runs the lookup for you. */
+  auto?: string;
 }) {
   const [looking, setLooking] = useState(false);
   const [hits, setHits] = useState<LyricHit[] | null>(null);
+  const [chosen, setChosen] = useState<LyricHit | null>(null);
+  const [browsing, setBrowsing] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   const look = async () => {
@@ -32,14 +39,19 @@ export default function LyricsFinder({
     setLooking(true);
     setProblem(null);
     setHits(null);
+    setChosen(null);
+    setBrowsing(false);
     try {
       const response = await fetch(`/api/lyrics?${new URLSearchParams({ track, artist })}`);
       const body = (await response.json()) as { hits?: LyricHit[]; problem?: string };
       const found = body.hits ?? [];
       if (body.problem) setProblem(body.problem);
-      // Nothing to choose between, so do not make them choose.
-      if (found.length === 1) onPick(found[0].lyrics);
-      else setHits(found);
+      setHits(found);
+      // Best match first, from the server. Take it rather than asking again.
+      if (found.length > 0) {
+        setChosen(found[0]);
+        onPick(found[0].lyrics);
+      }
     } catch {
       setProblem("Could not reach the lyrics database.");
       setHits([]);
@@ -48,7 +60,22 @@ export default function LyricsFinder({
     }
   };
 
+  const ran = useRef<string | null>(null);
+  useEffect(() => {
+    if (!auto || ran.current === auto) return;
+    ran.current = auto;
+    void look();
+    // look is stable enough for this: it reads track/artist, which move with auto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto]);
+
   const empty = hits && hits.length === 0 && !problem;
+  const others = hits ? hits.filter((hit) => hit.id !== chosen?.id) : [];
+  const take = (hit: LyricHit) => {
+    setChosen(hit);
+    onPick(hit.lyrics);
+    setBrowsing(false);
+  };
   // Nothing to search on yet, so do not offer a search that cannot work.
   const ready = track.trim().length >= 2;
 
@@ -58,12 +85,12 @@ export default function LyricsFinder({
         <button
           type="button"
           className="chip whitespace-nowrap"
-          data-on={looking || !ready ? undefined : "true"}
+          data-on={looking || !ready || chosen ? undefined : "true"}
           onClick={look}
           disabled={looking || !ready}
           title={ready ? undefined : "Give the song a title first"}
         >
-          {looking ? "Looking…" : "Find the words"}
+          {looking ? "Looking…" : chosen ? "Look again" : "Find the words"}
         </button>
         {children}
       </div>
@@ -82,20 +109,32 @@ export default function LyricsFinder({
         </p>
       ) : null}
 
-      {hits && hits.length > 1 ? (
+      {chosen ? (
+        <p className="flex flex-wrap items-baseline gap-x-2 text-[13px] leading-relaxed text-bone-dim">
+          <span>
+            Took <b className="font-medium text-bone">{chosen.album ?? chosen.track}</b>, {chosen.words} words.
+          </span>
+          {others.length ? (
+            <button
+              type="button"
+              className="underline underline-offset-2 hover:text-bone"
+              aria-expanded={browsing}
+              onClick={() => setBrowsing(!browsing)}
+            >
+              {browsing ? "never mind" : `${others.length} other version${others.length > 1 ? "s" : ""}`}
+            </button>
+          ) : null}
+        </p>
+      ) : null}
+
+      {browsing && others.length ? (
         <div className="max-w-[520px]">
-          <p className="text-[13px] leading-relaxed text-bone-dim">
-            {hits.length} versions differ. Pick the one you are learning.
-          </p>
-          <ul className="mt-1">
-            {hits.map((hit) => (
+          <ul>
+            {others.map((hit) => (
               <li key={hit.id} className="border-b border-line last:border-b-0">
                 <button
                   type="button"
-                  onClick={() => {
-                    onPick(hit.lyrics);
-                    setHits(null);
-                  }}
+                  onClick={() => take(hit)}
                   className="flex min-h-11 w-full items-center gap-4 rounded-[8px] py-3 text-left transition-opacity hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone active:scale-[0.99]"
                 >
                   <span className="min-w-0 flex-1">

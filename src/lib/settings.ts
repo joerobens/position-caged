@@ -55,8 +55,12 @@ export type Settings = {
   showScale: boolean;
   /** Follow the system, or override it. */
   theme: ThemePreference;
-  /** Lyric size on the stand, in pixels. */
+  /** Lyric size on the stand, in pixels. Ignored while lyricFit is on. */
   lyricSize: number;
+  /** Columns to read the words in on the stand. */
+  lyricColumns: 1 | 2;
+  /** Size the words to fill the screen exactly, so nothing needs scrolling. */
+  lyricFit: boolean;
   /** Reading the neck, playing to the clock, or working the fingers. */
   mode: Mode;
   system: System;
@@ -102,6 +106,8 @@ export const DEFAULT_SETTINGS: Settings = {
   showScale: true,
   theme: "system",
   lyricSize: 26,
+  lyricColumns: 2,
+  lyricFit: true,
   mode: "learn",
   system: "chords",
   drill: "caged",

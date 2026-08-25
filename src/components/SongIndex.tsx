@@ -78,7 +78,6 @@ export default function SongIndex() {
                 <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
                   <b className="text-[15px] font-medium">{song.title}</b>
                   <span className="text-[13px] text-bone-dim">{song.credit}</span>
-                  {mine ? <span className="label">yours</span> : null}
                   {hasLyrics ? <span className="label">lyrics</span> : null}
                 </span>
                 <span className="font-mono text-[12px]" style={{ color: "var(--accent)" }}>

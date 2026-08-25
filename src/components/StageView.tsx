@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CaretLeft, CaretRight, Minus, Plus } from "@phosphor-icons/react";
+import { useRef } from "react";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
@@ -13,8 +14,9 @@ import { KEYS } from "@/lib/music";
 import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 import { ICON } from "@/lib/icons";
+import { useFitText } from "@/hooks/useFitText";
 
-const MIN_SIZE = 18;
+const MIN_SIZE = 22;
 const MAX_SIZE = 56;
 
 /**
@@ -33,6 +35,47 @@ export default function StageView({ slug }: { slug: string }) {
 
   const song = findSong(library, slug);
   const lyrics = library.lyrics[slug] ?? "";
+
+  const columns = settings.lyricColumns === 1 ? 1 : 2;
+  const fit = settings.lyricFit;
+  // The box it has to fit inside changes when the chart opens or the iPad turns.
+  const { ref: lyricRef, size: fitted, pages } = useFitText<HTMLPreElement>({
+    enabled: fit,
+    min: MIN_SIZE,
+    max: MAX_SIZE,
+    deps: [lyrics, columns, chartOpen, fit],
+  });
+  const [page, setPage] = useState(0);
+  const turning = useRef(false);
+
+  // Turning a page moves the columns sideways by exactly one screenful.
+  const turn = useCallback((to: number) => {
+    const el = lyricRef.current;
+    if (!el) return;
+    const last = Math.max(0, Math.ceil(el.scrollWidth / el.clientWidth - 0.15) - 1);
+    const target = Math.max(0, Math.min(to, last));
+    turning.current = true;
+    setPage(target);
+    // The last page lands on the true end rather than its page boundary, so the
+    // final lines are never left sitting just past the edge.
+    const left = target >= last ? el.scrollWidth - el.clientWidth : target * el.clientWidth;
+    el.scrollTo({ left, behavior: "smooth" });
+    window.setTimeout(() => (turning.current = false), 400);
+  }, [lyricRef]);
+
+  // A different song, or a different shape of page, starts at the beginning.
+  // Adjusted during render rather than in an effect: this is state derived from
+  // a changing input, and an effect would render page one of the old song first.
+  const shape = `${slug}:${pages}:${columns}`;
+  const [lastShape, setLastShape] = useState(shape);
+  if (shape !== lastShape) {
+    setLastShape(shape);
+    setPage(0);
+  }
+  useEffect(() => {
+    const el = lyricRef.current;
+    if (el) el.scrollTo({ left: 0 });
+  }, [shape, lyricRef]);
 
   // Opened from a set, the stand knows where it is in the running order.
   const set = findSet(library, params.get("set") ?? "");
@@ -53,7 +96,6 @@ export default function StageView({ slug }: { slug: string }) {
    * Up and down are left alone so the pedal can still scroll a long song.
    */
   useEffect(() => {
-    if (!set) return;
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
@@ -65,10 +107,18 @@ export default function StageView({ slug }: { slug: string }) {
         event.preventDefault();
         go(previous);
       }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        turn(page + 1);
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        turn(page - 1);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [set, next, previous, go]);
+  }, [set, next, previous, go, turn, page]);
 
   if (!song) {
     return (
@@ -85,11 +135,12 @@ export default function StageView({ slug }: { slug: string }) {
   // On a stand you need the shape under your fingers, not the concert pitch.
   const playRoot = shapeRoot(numbering.root, effectiveCapo(song.capo, song.tuning));
   const inTuning = tuningOf(song.tuning).id;
-  const size = Math.min(MAX_SIZE, Math.max(MIN_SIZE, settings.lyricSize));
-  const resize = (delta: number) => update({ lyricSize: Math.min(MAX_SIZE, Math.max(MIN_SIZE, size + delta)) });
+  const manual = Math.min(MAX_SIZE, Math.max(MIN_SIZE, settings.lyricSize));
+  const resize = (delta: number) => update({ lyricSize: Math.min(MAX_SIZE, Math.max(MIN_SIZE, manual + delta)) });
+  const size = fit ? fitted : manual;
 
   return (
-    <main className="flex min-h-[100dvh] flex-col">
+    <main className="flex h-[100dvh] flex-col overflow-hidden">
       {/* everything you might need mid-song, in one strip that never moves */}
       <header className="sticky top-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-ink px-[var(--gutter)] pb-2 pt-[max(8px,env(safe-area-inset-top))]">
         <Link
@@ -116,13 +167,40 @@ export default function StageView({ slug }: { slug: string }) {
             : `${song.capo ? `capo ${song.capo} · ` : ""}${KEYS[song.root]} ${song.tonality}`}
         </span>
         <div className="ml-auto flex flex-none items-center gap-2">
-          <button type="button" className="chip px-3" aria-label="Smaller text" onClick={() => resize(-3)}>
-            <Minus size={ICON.sm} weight="bold" />
+          <div className="segmented w-fit" role="group" aria-label="Columns">
+            {([1, 2] as const).map((count) => (
+              <button
+                key={count}
+                type="button"
+                aria-pressed={columns === count}
+                aria-label={`${count} column${count > 1 ? "s" : ""}`}
+                onClick={() => update({ lyricColumns: count })}
+              >
+                {count}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={fit}
+            data-on={fit ? "true" : undefined}
+            onClick={() => update({ lyricFit: !fit })}
+          >
+            Fit
           </button>
-          <span className="w-9 text-center font-mono text-[12px] text-bone-dim">{size}</span>
-          <button type="button" className="chip px-3" aria-label="Bigger text" onClick={() => resize(3)}>
-            <Plus size={ICON.sm} weight="bold" />
-          </button>
+          {/* Sizing by hand only means anything when it is not being done for you. */}
+          {fit ? null : (
+            <>
+              <button type="button" className="chip px-3" aria-label="Smaller text" onClick={() => resize(-3)}>
+                <Minus size={ICON.sm} weight="bold" />
+              </button>
+              <span className="w-9 text-center font-mono text-[12px] text-bone-dim">{manual}</span>
+              <button type="button" className="chip px-3" aria-label="Bigger text" onClick={() => resize(3)}>
+                <Plus size={ICON.sm} weight="bold" />
+              </button>
+            </>
+          )}
           <button type="button" className="chip" aria-pressed={chartOpen} onClick={() => setChartOpen((open) => !open)}>
             Chart
           </button>
@@ -153,11 +231,27 @@ export default function StageView({ slug }: { slug: string }) {
       ) : null}
 
       {lyrics ? (
-        <div className="flex-1 px-[var(--gutter)] py-4 pb-[max(24px,env(safe-area-inset-bottom))]">
-          {/* Two columns once there is width for them, so a short song needs no scrolling at all. */}
+        <div className="min-h-0 flex-1 px-[var(--gutter)] py-4 pb-[max(24px,env(safe-area-inset-bottom))]">
           <pre
-            className="whitespace-pre-wrap font-[family-name:var(--font-display)] text-bone lg:columns-2 lg:gap-10"
-            style={{ fontSize: `${size}px`, lineHeight: 1.5 }}
+            ref={lyricRef}
+            className={`h-full whitespace-pre-wrap font-[family-name:var(--font-display)] text-bone ${
+              fit ? "overflow-x-auto overflow-y-hidden" : "overflow-y-auto"
+            }`}
+            onScroll={(event) => {
+              if (turning.current || !fit) return;
+              const el = event.currentTarget;
+              if (el.clientWidth > 0) setPage(Math.round(el.scrollLeft / el.clientWidth));
+            }}
+            style={{
+              fontSize: `${size}px`,
+              lineHeight: 1.35,
+              columnCount: columns,
+              columnGap: "2.5rem",
+              // Fill each column to the bottom rather than balancing them. Balanced
+              // columns stop at the content's own height, which leaves the foot of
+              // the screen empty and the type smaller than it needed to be.
+              columnFill: fit ? "auto" : "balance",
+            }}
           >
             {lyrics}
           </pre>
@@ -173,6 +267,35 @@ export default function StageView({ slug }: { slug: string }) {
           </Link>
         </div>
       )}
+      {fit && pages > 1 ? (
+        <nav
+          className="flex flex-none items-stretch gap-2 border-t border-line px-[var(--gutter)] py-2"
+          aria-label="Pages"
+        >
+          <button
+            type="button"
+            className="chip flex min-h-14 flex-1 items-center justify-center"
+            disabled={page === 0}
+            onClick={() => turn(page - 1)}
+            aria-label="Previous page"
+          >
+            <CaretLeft size={ICON.md} weight="bold" />
+          </button>
+          <span className="flex min-w-[7rem] flex-none items-center justify-center font-mono text-[13px] text-bone-dim">
+            page {page + 1} of {pages}
+          </span>
+          <button
+            type="button"
+            className="chip flex min-h-14 flex-1 items-center justify-center"
+            disabled={page >= pages - 1}
+            onClick={() => turn(page + 1)}
+            aria-label="Next page"
+          >
+            <CaretRight size={ICON.md} weight="bold" />
+          </button>
+        </nav>
+      ) : null}
+
       {set ? (
         <nav
           className="sticky bottom-0 z-20 flex items-stretch gap-2 border-t border-line bg-ink px-[var(--gutter)] pb-[max(8px,env(safe-area-inset-bottom))] pt-2"

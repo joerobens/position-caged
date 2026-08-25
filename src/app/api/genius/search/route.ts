@@ -59,9 +59,13 @@ export async function GET(request: Request) {
       );
     }
     const body = (await response.json()) as GeniusResponse;
+    // Genius indexes literature alongside music, so a search can come back with
+    // book chapters sitting under the songs. A chapter is not a song.
+    const isChapter = (title: string) => /\(?\bchap(ter)?\.? ?\d+\)?/i.test(title);
     const hits: GeniusHit[] = (body.response?.hits ?? [])
       .map((hit) => hit.result)
       .filter((result): result is NonNullable<typeof result> => Boolean(result))
+      .filter((result) => !isChapter(result.title ?? ""))
       .map((result) => ({
         id: result.id,
         title: result.title,

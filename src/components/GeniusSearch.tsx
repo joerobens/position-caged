@@ -20,6 +20,7 @@ export default function GeniusSearch({
   // Results are kept with the term that produced them, so a stale list can be
   // ignored on render rather than cleared from inside an effect.
   const [result, setResult] = useState<{ q: string; hits: GeniusHit[] }>({ q: "", hits: [] });
+  const [picked, setPicked] = useState<GeniusHit | null>(null);
   const [state, setState] = useState<"idle" | "searching" | "off" | "failed">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const latest = useRef(0);
@@ -85,6 +86,24 @@ export default function GeniusSearch({
         </p>
       ) : state === "searching" && !hits.length ? (
         <p className="text-[13px] text-bone-dim">Looking&hellip;</p>
+      ) : picked ? (
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-ink px-3 py-2.5">
+          {picked.art ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={picked.art} alt="" className="size-10 flex-none rounded-md object-cover" />
+          ) : null}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-bone">{picked.title}</span>
+            <span className="block truncate text-[12.5px] text-bone-dim">{picked.artist}</span>
+          </span>
+          <button
+            type="button"
+            className="chip chip-sm flex-none"
+            onClick={() => setPicked(null)}
+          >
+            Change
+          </button>
+        </div>
       ) : hits.length ? (
         <ul className="flex flex-col overflow-hidden rounded-xl border border-line">
           {hits.map((hit) => (
@@ -92,7 +111,10 @@ export default function GeniusSearch({
               <button
                 type="button"
                 className="flex w-full items-center gap-3 bg-ink px-3 py-2.5 text-left transition-colors hover:bg-board"
-                onClick={() => onPick({ title: hit.title, artist: hit.artist, url: hit.url })}
+                onClick={() => {
+                  setPicked(hit);
+                  onPick({ title: hit.title, artist: hit.artist, url: hit.url });
+                }}
               >
                 {hit.art ? (
                   // eslint-disable-next-line @next/next/no-img-element
