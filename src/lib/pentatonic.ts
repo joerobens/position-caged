@@ -107,3 +107,22 @@ export function relativeMajor(minorRoot: number): number {
 export function relativeMinor(majorRoot: number): number {
   return (majorRoot + 9) % 12;
 }
+
+/**
+ * Both landmarks, everywhere they fall on the neck.
+ *
+ * This is the picture the whole system is for: shape one at the fifth fret, shape
+ * four at the twelfth, shape one again at the seventeenth. Two safe destinations
+ * repeating, rather than five boxes to memorise, and knowing where they are is
+ * what stops you getting lost between them.
+ */
+export function landmarkBoxes(minorRoot: number): Box[] {
+  const out: Box[] = [];
+  for (const shape of LANDMARKS) {
+    for (const octave of [0, 1]) {
+      const box = pentBox(minorRoot, shape, octave);
+      if (box.low >= 0 && box.low <= FRET_COUNT - 3) out.push(box);
+    }
+  }
+  return out.sort((a, b) => a.low - b.low);
+}

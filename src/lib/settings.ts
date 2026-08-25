@@ -40,6 +40,8 @@ export type Settings = {
   /** The pentatonic landmark view: numbered boxes and their diagonal runs. */
   landmark: boolean;
   pentShape: PentShape;
+  /** Both landmarks at once, everywhere they fall, rather than one box. */
+  pentLandmarks: boolean;
   /** Draw the diagonal extension that carries the box up the neck. */
   showRun: boolean;
   /** Follow a progression rather than sitting on one chord. */
@@ -91,6 +93,7 @@ export const DEFAULT_SETTINGS: Settings = {
   rootMap: false,
   landmark: false,
   pentShape: 1,
+  pentLandmarks: true,
   showRun: true,
   changes: false,
   progression: "blues12",

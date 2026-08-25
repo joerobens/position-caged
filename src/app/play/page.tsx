@@ -385,7 +385,7 @@ export default function Page() {
               landmark={
                 view.landmarkDrawn
                   ? {
-                      shape: settings.pentShape,
+                      shape: settings.pentLandmarks ? ("landmarks" as const) : settings.pentShape,
                       minorRoot: settings.tonality === "minor" ? settings.root : relativeMinor(settings.root),
                       showRun: settings.showRun,
                     }
@@ -552,21 +552,39 @@ export default function Page() {
                   <Field label="Box" info={INFO.pentShape}>
                     <ChipGroup
                       ariaLabel="Box"
-                      value={settings.pentShape}
-                      onChange={(pentShape: PentShape) => update({ pentShape })}
-                      options={PENT_SHAPES.map((shape) => ({
-                        value: shape,
-                        // Named, not just dotted: a mark alone is not enough to carry it.
-                        label: LANDMARKS.includes(shape) ? `${shape} · landmark` : String(shape),
-                        title: LANDMARKS.includes(shape) ? `Shape ${shape}, a landmark` : `Shape ${shape}`,
-                      }))}
+                      value={settings.pentLandmarks ? "landmarks" : String(settings.pentShape)}
+                      onChange={(value) =>
+                        value === "landmarks"
+                          ? update({ pentLandmarks: true })
+                          : update({ pentLandmarks: false, pentShape: Number(value) as PentShape })
+                      }
+                      options={[
+                        {
+                          value: "landmarks",
+                          label: "Both landmarks",
+                          title: "Shapes one and four, everywhere they fall on the neck",
+                        },
+                        ...PENT_SHAPES.map((shape) => ({
+                          value: String(shape),
+                          // Named, not just dotted: a mark alone is not enough to carry it.
+                          label: LANDMARKS.includes(shape) ? `${shape} · landmark` : String(shape),
+                          title: LANDMARKS.includes(shape) ? `Shape ${shape}, a landmark` : `Shape ${shape}`,
+                        })),
+                      ]}
                     />
                   </Field>
-                  <Field label="Diagonal run" info={INFO.run}>
-                    <Toggle on={settings.showRun} onChange={(showRun) => update({ showRun })}>
-                      {settings.showRun ? "Shown" : "Hidden"}
-                    </Toggle>
-                  </Field>
+                  {settings.pentLandmarks ? (
+                    <p className="text-[13px] leading-relaxed text-bone-dim">
+                      Shape one in one colour, shape four in the other, wherever each falls. Two safe places to aim for
+                      rather than five boxes to memorise. Pick a single box to see its diagonal run.
+                    </p>
+                  ) : (
+                    <Field label="Diagonal run" info={INFO.run}>
+                      <Toggle on={settings.showRun} onChange={(showRun) => update({ showRun })}>
+                        {settings.showRun ? "Shown" : "Hidden"}
+                      </Toggle>
+                    </Field>
+                  )}
                 </>
               ) : null}
 
