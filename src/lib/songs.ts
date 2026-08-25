@@ -23,6 +23,8 @@ export type Song = {
    * root instead.
    */
   numbering?: "relative-major" | "tonic";
+  /** Where you looked it up, so you can go back for the words. */
+  sourceUrl?: string;
   /** Why it is worth having in here. */
   note?: string;
 };

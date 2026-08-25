@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import GeniusSearch from "@/components/GeniusSearch";
 import { KEYS, type Tonality } from "@/lib/music";
 import { chartToText, textToChart } from "@/lib/chartText";
 import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
@@ -27,6 +28,7 @@ export default function SongForm({
   const [feel, setFeel] = useState(initial?.feel ?? "");
   const [bpm, setBpm] = useState(initial?.bpm ? String(initial.bpm) : "");
   const [text, setText] = useState(initial ? chartToText(initial.chart) : "Verse: 1 1 4 1 | 1 5 1 1");
+  const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? "");
 
   const chart = textToChart(text);
   const counting = numberingOf({ root, tonality, numbering });
@@ -48,11 +50,23 @@ export default function SongForm({
       feel: feel.trim() || undefined,
       bpm: bpm ? Number(bpm) : undefined,
       chart,
+      sourceUrl: sourceUrl || undefined,
       note: initial?.note,
     });
   };
 
   return (
+    <div className="flex flex-col gap-3">
+      {/* Look it up, or just type it in. Either way the chart is yours to write. */}
+      {!initial ? (
+        <GeniusSearch
+          onPick={(hit) => {
+            setTitle(hit.title);
+            setCredit(hit.artist);
+            setSourceUrl(hit.url);
+          }}
+        />
+      ) : null}
     <div className="panel flex flex-col gap-4">
       <div className="flex flex-wrap gap-4">
         <label className="flex min-w-[200px] flex-1 flex-col gap-2">
@@ -206,7 +220,11 @@ export default function SongForm({
             Cancel
           </button>
         ) : null}
+        {sourceUrl ? (
+          <span className="self-center text-[13px] text-bone-dim">Linked to its Genius page.</span>
+        ) : null}
       </div>
+    </div>
     </div>
   );
 }

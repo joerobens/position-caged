@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLibrary } from "@/hooks/useLibrary";
 import SongForm from "@/components/SongForm";
+import { GeniusLink } from "@/components/GeniusSearch";
 import { addSong, findSong, hideSeeded, removeSong, setLyrics, slugify } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { barOffsets, chartChords, chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
@@ -233,6 +234,8 @@ export default function SongView({ slug }: { slug: string }) {
         <div className="flex items-center gap-2">
           <span className="label">Lyrics</span>
           <div className="ml-auto flex items-center gap-2">
+            {/* The words live behind this link, not in the app. */}
+            {song.sourceUrl ? <GeniusLink url={song.sourceUrl} /> : null}
             {lyrics ? (
               <Link
                 href={`/songs/${song.slug}/play`}
