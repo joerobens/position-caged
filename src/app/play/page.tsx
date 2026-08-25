@@ -16,6 +16,7 @@ import { DRILLS, SPIDER_PATTERNS, spiderSequence, spiderStepAt, type Drill } fro
 import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
 import { scaleForTonality, type AdvanceMode, type Mode, type Settings } from "@/lib/settings";
 import { PROGRESSIONS, chordAt, nearestPosition, type Progression } from "@/lib/progressions";
+import { LANDMARKS, PENT_SHAPES, relativeMinor, type PentShape } from "@/lib/pentatonic";
 import { deriveView } from "@/lib/view";
 import { paletteFor } from "@/lib/theme";
 import { useTheme } from "@/hooks/useTheme";
@@ -37,6 +38,9 @@ const INFO = {
     "The five CAGED shapes, ordered up the neck and named for the open chord each one comes from. All shows every shape at once, each in its own colour. Roots strips it back to the root notes and the octave links between them, which is the map underneath everything else.",
   scale:
     "The scale drawn around the shape. Turn it off to leave just the chord tones, which is how you check you actually know where the 1, 3 and 5 are rather than running a pattern.",
+  pentShape:
+    "The pentatonic as five numbered boxes rather than through the CAGED shapes. Shapes one and four are the landmarks, marked with a dot: one has its root under your index finger on the low E, the other on the A string. Learn those two and the other three are filler.",
+  run: "The diagonal extension. Start two frets below the box, play the notes in pairs, and slide at the end of each pair. It is the same five notes climbing through three octaves, and it lands you exactly where the next landmark begins.",
   region: "Where you are standing on the neck. Following changes this does not pick a chord, it picks the patch of neck you play in, and each chord's nearest shape is brought to you there.",
   changes: "Follow the chords instead of sitting on one. The shape chips still pick the region you play in, and each chord comes to you there. Degrees count from the chord you are on, so the third is always marked 3, whichever chord it belongs to.",
   progression: "Which form to walk. The twelve bar blues is the one you will hear; quick change borrows the IV early, in bar two.",
@@ -289,7 +293,8 @@ export default function Page() {
       }))
     : [
         { value: "all", label: "All", title: "Every shape at once, colour coded, across the whole neck" },
-        { value: "roots", label: "Roots", title: "Every root on the neck, joined by its octave links" },
+            { value: "roots", label: "Roots", title: "Every root on the neck, joined by its octave links" },
+        { value: "landmark", label: "Pentatonic", title: "The five numbered boxes, and the runs that join them" },
         ...shapeOptions.map((option) => ({ ...option, value: String(option.value) })),
       ];
   const shapeChoice = view.rootMap ? "roots" : settings.allShapes ? "all" : String(settings.positionIndex);
@@ -336,6 +341,18 @@ export default function Page() {
           labels={settings.labels}
           allShapes={view.allShapes}
           rootMap={view.rootMap}
+          landmark={
+            view.landmarkDrawn
+              ? {
+                  shape: settings.pentShape,
+                  // The boxes are named from the minor root, so a major key is
+                  // read from its relative minor: the same box, the other name.
+                  minorRoot:
+                    settings.tonality === "minor" ? settings.root : relativeMinor(settings.root),
+                  showRun: settings.showRun,
+                }
+              : null
+          }
           showScale={view.scaleDrawn}
           spider={spider}
           palette={palette}
@@ -446,10 +463,12 @@ export default function Page() {
                 value={shapeChoice}
                 onChange={(value) =>
                   value === "all"
-                    ? update({ allShapes: true, rootMap: false })
+                    ? update({ allShapes: true, rootMap: false, landmark: false })
                     : value === "roots"
-                      ? update({ rootMap: true, allShapes: false })
-                      : selectPosition(Number(value))
+                      ? update({ rootMap: true, allShapes: false, landmark: false })
+                      : value === "landmark"
+                        ? update({ landmark: true, rootMap: false, allShapes: false })
+                        : selectPosition(Number(value))
                 }
                 options={shapeChoices}
               />
@@ -529,6 +548,27 @@ export default function Page() {
                 </p>
               )}
             </Field>
+            {view.landmarkDrawn ? (
+              <>
+                <Field label="Pentatonic shape" info={INFO.pentShape}>
+                  <ChipGroup
+                    ariaLabel="Pentatonic shape"
+                    value={settings.pentShape}
+                    onChange={(pentShape: PentShape) => update({ pentShape })}
+                    options={PENT_SHAPES.map((shape) => ({
+                      value: shape,
+                      label: LANDMARKS.includes(shape) ? `${shape} ·` : String(shape),
+                      title: LANDMARKS.includes(shape) ? `Shape ${shape}, a landmark` : `Shape ${shape}`,
+                    }))}
+                  />
+                </Field>
+                <Field label="Diagonal run" info={INFO.run}>
+                  <Toggle on={settings.showRun} onChange={(showRun) => update({ showRun })}>
+                    {settings.showRun ? "Shown" : "Hidden"}
+                  </Toggle>
+                </Field>
+              </>
+            ) : null}
             {view.note ? (
               <p className="rounded-xl border border-line bg-ink/40 p-3 text-[13px] leading-relaxed text-bone-dim">
                 {view.note}

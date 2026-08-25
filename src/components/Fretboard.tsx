@@ -19,6 +19,7 @@ import type { Labels, Zoom } from "@/lib/settings";
 import type { SpiderStep } from "@/lib/drills";
 import type { Palette } from "@/lib/theme";
 import { APPROACH_ABOVE, APPROACH_BELOW, TARGET_THIRD, type Chord } from "@/lib/progressions";
+import { LANDMARKS, diagonalRun, pentBox, relativeMajor, type PentShape } from "@/lib/pentatonic";
 
 /** Neck geometry, in SVG user units. */
 const NUT_X = 64;
@@ -31,7 +32,7 @@ const BOARD_HEIGHT = TOP_Y + 5 * STRING_GAP + 48;
 const MAP_HEIGHT = 52;
 const MAP_TOP = TOP_Y + 5 * STRING_GAP + 38;
 const MAP_ROW = 10;
-const INLAYS = [3, 5, 7, 9, 15];
+const INLAYS = [3, 5, 7, 9, 15, 17, 19, 21];
 
 /** Open-string MIDI numbers, low E to high e. */
 const STRING_MIDI = [40, 45, 50, 55, 59, 64];
@@ -60,6 +61,8 @@ type Props = {
   allShapes?: boolean;
   /** Show only the roots, joined by their octave links. */
   rootMap?: boolean;
+  /** The pentatonic seen as numbered boxes, with the run that joins them. */
+  landmark?: { shape: PentShape; minorRoot: number; showRun: boolean } | null;
   /** The scale layer. Off leaves the chord tones on their own. */
   showScale?: boolean;
   /** A finger exercise, with the cursor sitting on the note due now. */
@@ -104,6 +107,7 @@ function Fretboard({
   labels,
   allShapes = false,
   rootMap = false,
+  landmark = null,
   showScale = true,
   spider = null,
   palette,
@@ -140,16 +144,16 @@ function Fretboard({
     const gutter = span.low === 0 ? -28 : left - 34;
     const height = allShapes || rootMap ? BOARD_HEIGHT + MAP_HEIGHT : BOARD_HEIGHT;
     const box =
-      zoom === "position" && !allShapes && !rootMap
+      zoom === "position" && !allShapes && !rootMap && !landmark
         ? [gutter, 0, right - gutter + 16, height]
         : [0, 0, BOARD_WIDTH, height];
     return {
       primary,
       secondary,
-      labelX: zoom === "position" && !allShapes && !rootMap ? gutter + 14 : 14,
+      labelX: zoom === "position" && !allShapes && !rootMap && !landmark ? gutter + 14 : 14,
       box,
     };
-  }, [position, pair, zoom, allShapes, rootMap, spiderWindow]);
+  }, [position, pair, zoom, allShapes, rootMap, landmark, spiderWindow]);
 
   const colour = palette.shapes[position.name];
   const chordTones = useMemo(() => chordToneKeys(position), [position]);
@@ -163,7 +167,7 @@ function Fretboard({
   const visibleFrets = useMemo(() => {
     const frets: number[] = [];
     for (let f = 0; f <= FRET_COUNT; f++) {
-      if (zoom === "position" && !allShapes && !rootMap) {
+      if (zoom === "position" && !allShapes && !rootMap && !landmark) {
         const inPrimary = f >= view.primary.low - 1 && f <= view.primary.high + 1;
         const inSecondary = !!view.secondary && f >= view.secondary.low - 1 && f <= view.secondary.high + 1;
         if (!inPrimary && !inSecondary) continue;
@@ -171,7 +175,7 @@ function Fretboard({
       frets.push(f);
     }
     return frets;
-  }, [zoom, allShapes, rootMap, view]);
+  }, [zoom, allShapes, rootMap, landmark, view]);
 
   /**
    * Every shape at once. Notes a shape frets take that shape's colour, notes two
@@ -179,7 +183,7 @@ function Fretboard({
    * behind them faintly so the neck reads as full rather than as five islands.
    */
   const allNotes = useMemo(() => {
-    if (!allShapes || rootMap || spiderWindow || !grips) return null;
+    if (!allShapes || rootMap || landmark || spiderWindow || !grips) return null;
     return chordTonesOnNeck(root, tonality).map((note) => {
       const key = `${note.string}:${note.fret}`;
       const owners = grips.get(key) ?? [];
@@ -195,7 +199,7 @@ function Fretboard({
         midi: STRING_MIDI[note.string] + note.fret,
       };
     });
-  }, [allShapes, rootMap, spiderWindow, grips, root, tonality, colourOf, colour, labels]);
+  }, [allShapes, rootMap, landmark, spiderWindow, grips, root, tonality, colourOf, colour, labels]);
 
 
   /**
@@ -204,7 +208,7 @@ function Fretboard({
    * when you move position, so the lattice is what you are actually learning.
    */
   const rootLattice = useMemo(() => {
-    if (!rootMap) return null;
+    if (!rootMap || landmark) return null;
     const notes: { key: string; string: number; fret: number; x: number; y: number; midi: number; colour: string }[] = [];
     for (let string = 0; string < 6; string++) {
       for (let fret = 0; fret <= FRET_COUNT; fret++) {
@@ -249,10 +253,60 @@ function Fretboard({
       }
     }
     return { notes, links, shadows };
-  }, [rootMap, root, grips, colourOf, colour, palette]);
+  }, [rootMap, landmark, root, grips, colourOf, colour, palette]);
+
+
+  /**
+   * The pentatonic as five numbered boxes. The chosen one is drawn solid, the same
+   * box an octave away is ghosted so the repeat is visible, and the diagonal run
+   * is the line that carries you out of the box and into the next landmark.
+   */
+  const pentatonic = useMemo(() => {
+    if (!landmark) return null;
+    const { shape, minorRoot, showRun } = landmark;
+    const boxes = [0, 1]
+      .map((octave) => pentBox(minorRoot, shape, octave))
+      .filter((box) => box.low <= FRET_COUNT - 3);
+
+    const dots = boxes.flatMap((box, index) =>
+      box.strings.flatMap((pair, string) =>
+        pair
+          .filter((fret) => fret !== undefined && fret <= FRET_COUNT)
+          .map((fret) => {
+            const degree = degreeAt(string, fret, minorRoot);
+            return {
+              key: `${index}:${string}:${fret}`,
+              string,
+              fret,
+              x: fretX(fret),
+              y: stringY(string),
+              midi: STRING_MIDI[string] + fret,
+              degree,
+              /** The root as a minor key, under the index finger on the low E. */
+              minorRootHere: degree === 0,
+              /** The same box read as a major key, three semitones up. */
+              majorRootHere: degree === 3,
+              primary: index === 0,
+            };
+          }),
+      ),
+    );
+
+    const run = showRun
+      ? diagonalRun(minorRoot, shape).map((note) => ({
+          ...note,
+          key: `run:${note.string}:${note.fret}`,
+          x: fretX(note.fret),
+          y: stringY(note.string),
+          midi: STRING_MIDI[note.string] + note.fret,
+        }))
+      : [];
+
+    return { boxes, dots, run, isLandmark: LANDMARKS.includes(shape) };
+  }, [landmark]);
 
   const notes = useMemo(() => {
-    if (allShapes || rootMap || spiderWindow) return [];
+    if (allShapes || rootMap || landmark || spiderWindow) return [];
     const out: {
       key: string;
       x: number;
@@ -299,11 +353,11 @@ function Fretboard({
       }
     }
     return out;
-  }, [allShapes, rootMap, spiderWindow, view, root, intervals, chordTones, labels, showScale, chord]);
+  }, [allShapes, rootMap, landmark, spiderWindow, view, root, intervals, chordTones, labels, showScale, chord]);
 
   const barre = position.shape.barre;
   // Anything that shows the whole neck puts its heading in the top left corner.
-  const wideView = allShapes || rootMap || !!spiderWindow || !!chord;
+  const wideView = allShapes || rootMap || !!landmark || !!spiderWindow || !!chord;
   const primaryLeft = blockLeft(view.primary.low);
   const primaryRight = blockRight(view.primary.high);
 
@@ -345,7 +399,7 @@ function Fretboard({
         height={5 * STRING_GAP + 22}
         rx={10}
         fill={colour}
-        opacity={spiderWindow ? 0.04 : allShapes || rootMap ? 0.05 : zoom === "position" ? 0.06 : 0.09}
+        opacity={spiderWindow || landmark ? 0.04 : allShapes || rootMap ? 0.05 : zoom === "position" ? 0.06 : 0.09}
       />
 
       {/* frets */}
@@ -379,8 +433,18 @@ function Fretboard({
       {INLAYS.filter((f) => f <= FRET_COUNT).map((fret) => (
         <circle key={`inlay-${fret}`} cx={NUT_X + (fret - 0.5) * FRET_WIDTH} cy={TOP_Y + 2.5 * STRING_GAP} r={4.5} fill={palette.inlay} />
       ))}
-      <circle cx={NUT_X + 11.5 * FRET_WIDTH} cy={TOP_Y + 1.5 * STRING_GAP} r={4.5} fill={palette.inlay} />
-      <circle cx={NUT_X + 11.5 * FRET_WIDTH} cy={TOP_Y + 3.5 * STRING_GAP} r={4.5} fill={palette.inlay} />
+      {[12, 24]
+        .filter((fret) => fret <= FRET_COUNT)
+        .flatMap((fret) => [1.5, 3.5].map((row) => ({ fret, row })))
+        .map(({ fret, row }) => (
+          <circle
+            key={`double-${fret}-${row}`}
+            cx={NUT_X + (fret - 0.5) * FRET_WIDTH}
+            cy={TOP_Y + row * STRING_GAP}
+            r={4.5}
+            fill={palette.inlay}
+          />
+        ))}
 
       {/* fret numbers and string names */}
       {visibleFrets.map((fret) => (
@@ -395,7 +459,7 @@ function Fretboard({
       ))}
 
       {/* muted strings, for shapes played from the nut */}
-      {position.fret === 0 && !allShapes && !rootMap && !spiderWindow
+      {position.fret === 0 && !allShapes && !rootMap && !landmark && !spiderWindow
         ? position.shape.frets.map((offset, string) =>
             offset === null ? (
               <text key={`mute-${string}`} className="fb-mark" x={NUT_X - 20} y={stringY(string) + 4} textAnchor="middle">
@@ -406,7 +470,7 @@ function Fretboard({
         : null}
 
       {/* barre */}
-      {barre && position.fret > 0 && !allShapes && !rootMap && !spiderWindow ? (
+      {barre && position.fret > 0 && !allShapes && !rootMap && !landmark && !spiderWindow ? (
         <rect
           x={fretX(position.fret) - 9}
           y={stringY(barre[1]) - 9}
@@ -540,6 +604,99 @@ function Fretboard({
         );
       })}
 
+      {/* the pentatonic boxes, and the run that gets you out of them */}
+      {pentatonic ? (
+        <>
+          {/* the box outline, so the shape reads as a shape */}
+          {pentatonic.boxes.map((box, index) => {
+            const lowFret = Math.min(...box.strings.map((pair) => pair[0]));
+            const highFret = Math.max(...box.strings.map((pair) => pair[1] ?? pair[0]));
+            const left = lowFret === 0 ? NUT_X - 34 : NUT_X + (lowFret - 1) * FRET_WIDTH;
+            return (
+              <rect
+                key={`box-${index}`}
+                x={left}
+                y={TOP_Y - 11}
+                width={NUT_X + Math.min(highFret, FRET_COUNT) * FRET_WIDTH - left}
+                height={5 * STRING_GAP + 22}
+                rx={10}
+                fill={colour}
+                opacity={index === 0 ? 0.07 : 0.03}
+              />
+            );
+          })}
+
+          {/* the diagonal run, drawn as the line it is */}
+          {pentatonic.run.map((note, index) => {
+            const previous = pentatonic.run[index - 1];
+            if (!previous) return null;
+            return (
+              <line
+                key={`runline-${note.key}`}
+                x1={previous.x}
+                y1={previous.y}
+                x2={note.x}
+                y2={note.y}
+                stroke={colour}
+                strokeWidth={note.slid ? 3 : 1.25}
+                strokeOpacity={note.slid ? 0.75 : 0.35}
+                strokeLinecap="round"
+              />
+            );
+          })}
+          {pentatonic.run.map((note) => (
+            <circle
+              key={note.key}
+              cx={note.x}
+              cy={note.y}
+              r={7}
+              fill="none"
+              stroke={colour}
+              strokeWidth={1.25}
+              strokeOpacity={0.5}
+            />
+          ))}
+
+          {/* the box itself on top */}
+          {pentatonic.dots.map((note) => (
+            <g
+              key={note.key}
+              opacity={note.primary ? 1 : 0.42}
+              onPointerDown={onPlayNote ? () => onPlayNote(note.midi) : undefined}
+              style={onPlayNote ? { cursor: "pointer" } : undefined}
+            >
+              <circle cx={note.x} cy={note.y} r={15} fill="transparent" />
+              {note.minorRootHere || note.majorRootHere ? (
+                <>
+                  {/* Two roots, because the box is two scales: the minor under your
+                      index finger, the major under your pinky. */}
+                  <circle cx={note.x} cy={note.y} r={12} fill={note.minorRootHere ? colour : palette.dotFill} />
+                  {note.majorRootHere ? (
+                    <circle cx={note.x} cy={note.y} r={12} fill="none" stroke={colour} strokeWidth={3} />
+                  ) : null}
+                  <text
+                    className="fb-dot"
+                    x={note.x}
+                    y={note.y + 4}
+                    textAnchor="middle"
+                    fill={note.minorRootHere ? palette.onAccent : colour}
+                  >
+                    {labels === "none" ? "" : labels === "notes" ? noteNameAt(note.string, note.fret) : note.minorRootHere ? "1" : "1M"}
+                  </text>
+                </>
+              ) : (
+                <>
+                  <circle cx={note.x} cy={note.y} r={11} fill={palette.dotFill} stroke={palette.scaleRing} strokeWidth={1} />
+                  <text className="fb-dot" x={note.x} y={note.y + 4} textAnchor="middle" fill={palette.dim}>
+                    {dotLabel(labels, note.degree, note.string, note.fret)}
+                  </text>
+                </>
+              )}
+            </g>
+          ))}
+        </>
+      ) : null}
+
       {/* the roots, and the octave links that join them up */}
       {rootLattice ? (
         <>
@@ -662,7 +819,9 @@ function Fretboard({
         textAnchor={wideView ? "start" : "middle"}
         fill={colour}
       >
-        {spiderWindow
+        {landmark
+          ? `Shape ${landmark.shape}${pentatonic?.isLandmark ? "  ·  a landmark" : ""}`
+          : spiderWindow
           ? `Spider walk · frets ${spiderWindow.low} to ${spiderWindow.high}`
           : chord
             ? `${chord.name}  ·  ${chord.roman}  ·  ${position.name} shape`
@@ -680,6 +839,11 @@ function Fretboard({
       {chord ? (
         <text className="voice-txt" x={view.box[0] + view.box[2] - 16} y={TOP_Y - 20} textAnchor="end" fill={colour} opacity={0.85}>
           aim at {NAMES[(chord.root + TARGET_THIRD) % 12]} (3rd)
+        </text>
+      ) : null}
+      {landmark ? (
+        <text className="voice-txt" x={view.box[0] + view.box[2] - 16} y={TOP_Y - 20} textAnchor="end" fill={colour} opacity={0.85}>
+          {NAMES[landmark.minorRoot]} minor  ·  {NAMES[relativeMajor(landmark.minorRoot)]} major
         </text>
       ) : null}
     </svg>

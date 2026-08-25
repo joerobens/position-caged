@@ -1,5 +1,6 @@
 import { EQUIVALENT_SCALE, SCALES, type Tonality } from "./music";
 import { SPIDER_PATTERNS, type Drill, type SpiderPattern } from "./drills";
+import type { PentShape } from "./pentatonic";
 import type { ThemePreference } from "./theme";
 
 /** Where the next shape comes from in the CAGED drill. */
@@ -33,6 +34,11 @@ export type Settings = {
   allShapes: boolean;
   /** Show only the roots, with the octave links that join them up. */
   rootMap: boolean;
+  /** The pentatonic landmark view: numbered boxes and their diagonal runs. */
+  landmark: boolean;
+  pentShape: PentShape;
+  /** Draw the diagonal extension that carries the box up the neck. */
+  showRun: boolean;
   /** Follow a progression rather than sitting on one chord. */
   changes: boolean;
   progression: string;
@@ -77,6 +83,9 @@ export const DEFAULT_SETTINGS: Settings = {
   droneFifth: true,
   allShapes: false,
   rootMap: false,
+  landmark: false,
+  pentShape: 1,
+  showRun: true,
   changes: false,
   progression: "blues12",
   customBars: "",

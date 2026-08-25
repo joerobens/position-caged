@@ -15,7 +15,13 @@ export const NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#"
 export const KEYS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"] as const;
 export const DEGREES = ["1", "b2", "2", "b3", "3", "4", "b5", "5", "b6", "6", "b7", "7"] as const;
 
-export const FRET_COUNT = 15;
+/**
+ * A real neck, not a diagram's worth of one. The pentatonic landmark system turns
+ * on shapes repeating an octave up: shape one at the fifth fret comes round again
+ * at the seventeenth, and a diagonal run can finish above the twentieth. Stopping
+ * at fifteen cut all of that off.
+ */
+export const FRET_COUNT = 22;
 
 export type Tonality = "major" | "minor";
 export type ShapeName = "C" | "A" | "G" | "E" | "D";
