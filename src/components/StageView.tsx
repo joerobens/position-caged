@@ -123,8 +123,8 @@ export default function StageView({ slug }: { slug: string }) {
 
       {chartOpen ? (
         <div className="border-b border-line px-[var(--gutter)] py-2">
-          {song.chart.map((section) => (
-            <div key={section.name} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1">
+          {song.chart.map((section, sectionIndex) => (
+            <div key={sectionIndex} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1">
               <span className="label w-16 flex-none">{section.name}</span>
               <div className="flex flex-wrap gap-1.5">
                 {section.bars.map((bar, index) => {

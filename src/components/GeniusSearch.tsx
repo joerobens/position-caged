@@ -10,8 +10,10 @@ import type { GeniusHit } from "@/app/api/genius/search/route";
  */
 export default function GeniusSearch({
   onPick,
+  caption = "Find the song",
 }: {
   onPick: (hit: { title: string; artist: string; url: string }) => void;
+  caption?: string;
 }) {
   const [query, setQuery] = useState("");
   // Results are kept with the term that produced them, so a stale list can be
@@ -58,7 +60,7 @@ export default function GeniusSearch({
   return (
     <div className="panel flex flex-col gap-3">
       <label className="flex flex-col gap-2">
-        <span className="label">Find the song</span>
+        <span className="label">{caption}</span>
         <span className="flex items-center gap-2.5 rounded-[10px] border border-line bg-ink px-3">
           <MagnifyingGlass size={17} weight="bold" className="flex-none text-bone-dim" />
           <input

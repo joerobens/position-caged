@@ -101,8 +101,8 @@ export default function SongView({ slug }: { slug: string }) {
       <>
       {/* the chart, which is the reminder you actually need on a stand */}
       <section className="panel mt-5" aria-label="Chart">
-        {song.chart.map((section) => (
-          <div key={section.name} className="border-b border-line py-3 first:pt-0 last:border-b-0 last:pb-0">
+        {song.chart.map((section, sectionIndex) => (
+          <div key={sectionIndex} className="border-b border-line py-3 first:pt-0 last:border-b-0 last:pb-0">
             <span className="label">{section.name}</span>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {section.bars.map((bar, index) => {

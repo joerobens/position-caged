@@ -58,15 +58,14 @@ export default function SongForm({
   return (
     <div className="flex flex-col gap-3">
       {/* Look it up, or just type it in. Either way the chart is yours to write. */}
-      {!initial ? (
-        <GeniusSearch
-          onPick={(hit) => {
-            setTitle(hit.title);
-            setCredit(hit.artist);
-            setSourceUrl(hit.url);
-          }}
-        />
-      ) : null}
+      <GeniusSearch
+        caption={initial ? "Find the song, to fill in title, artist and link" : "Find the song"}
+        onPick={(hit) => {
+          setTitle(hit.title);
+          setCredit(hit.artist);
+          setSourceUrl(hit.url);
+        }}
+      />
     <div className="panel flex flex-col gap-4">
       <div className="flex flex-wrap gap-4">
         <label className="flex min-w-[200px] flex-1 flex-col gap-2">
