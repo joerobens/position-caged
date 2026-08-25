@@ -18,6 +18,8 @@ export type DroneSettings = {
 
 export class AudioEngine {
   private context: AudioContext | null = null;
+  private unlocked = false;
+  private listeners = new Set<() => void>();
   private droneGain: GainNode | null = null;
   private droneVoices: OscillatorNode[] = [];
   private droneLfo: OscillatorNode | null = null;
@@ -29,9 +31,63 @@ export class AudioEngine {
       const Ctor: typeof AudioContext =
         window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.context = new Ctor();
+      /*
+       * Safari mutes Web Audio when the hardware silent switch is on unless the
+       * page says it is playback rather than an incidental noise. An iPad on a
+       * stand is very often muted, which made this look like the audio was
+       * broken rather than silenced.
+       */
+      const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+      if (session) {
+        try {
+          session.type = "playback";
+        } catch {
+          // Older Safari. Nothing to fall back to.
+        }
+      }
     }
     if (this.context.state === "suspended") void this.context.resume();
     return this.context;
+  }
+
+  /** True once a real gesture has started the context and sound can be made. */
+  get ready(): boolean {
+    return this.unlocked && this.context?.state === "running";
+  }
+
+  onReadyChange(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private announce() {
+    for (const listener of this.listeners) listener();
+  }
+
+  /**
+   * iOS will not start an audio context except inside a real gesture, and a
+   * toggle that sets state and lets an effect do the work is not one. So the
+   * first touch anywhere on the page unlocks it, whatever that touch was for.
+   */
+  async unlock(): Promise<boolean> {
+    const ctx = this.ensure();
+    try {
+      if (ctx.state === "suspended") await ctx.resume();
+      // A moment of silence, which is what actually convinces iOS.
+      const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch {
+      // Left locked; the caller can ask again on the next gesture.
+    }
+    const was = this.unlocked;
+    this.unlocked = ctx.state === "running";
+    if (was !== this.unlocked) this.announce();
+    return this.unlocked;
   }
 
   get now(): number {

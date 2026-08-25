@@ -11,6 +11,7 @@ import Transport, { MAX_BPM, MIN_BPM } from "@/components/Transport";
 import { ChipGroup, Field, Segmented, Slider, Toggle } from "@/components/controls";
 import { useMetronome } from "@/hooks/useMetronome";
 import { useSettings } from "@/hooks/useSettings";
+import { useAudioReady } from "@/hooks/useAudioReady";
 import { getAudioEngine } from "@/lib/audio";
 import { DRILLS, SPIDER_PATTERNS, spiderSequence, spiderStepAt, type Drill } from "@/lib/drills";
 import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
@@ -109,6 +110,7 @@ export default function Page() {
     return PROGRESSIONS.find((entry) => entry.id === settings.progression) ?? PROGRESSIONS[0];
   }, [settings.progression, settings.customBars]);
   const resolvedTheme = useTheme(settings.theme);
+  const audioReady = useAudioReady();
   const palette = paletteFor(resolvedTheme);
 
   // The mode lives in the URL as well as in storage, so the iPad can hold a home
@@ -202,13 +204,15 @@ export default function Page() {
       engine.stopDrone();
       return;
     }
+    // Nothing can sound until a gesture has opened the context on iOS.
+    if (!audioReady) return;
     engine.setDrone({
       pitchClass: settings.root,
       octave: settings.droneOctave,
       volume: settings.droneVolume,
       fifth: settings.droneFifth,
     });
-  }, [settings.drone, settings.root, settings.droneOctave, settings.droneVolume, settings.droneFifth]);
+  }, [audioReady, settings.drone, settings.root, settings.droneOctave, settings.droneVolume, settings.droneFifth]);
 
   useEffect(() => () => getAudioEngine().stopDrone(), []);
 

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CaretDown, CircleHalf, Moon, Sun } from "@phosphor-icons/react";
+import { CaretDown, CircleHalf, Moon, SpeakerSimpleSlash, Sun } from "@phosphor-icons/react";
 import { Segmented, Slider, Toggle } from "./controls";
 import { keyLabel, type Tonality } from "@/lib/music";
 import type { ThemePreference } from "@/lib/theme";
+import { useAudioReady } from "@/hooks/useAudioReady";
 
 /**
  * Always on, in both modes. The drone sounds the key rather than belonging to a
@@ -36,6 +37,7 @@ export default function KeyBar({
   }) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const audioReady = useAudioReady();
 
   return (
     <div className="rounded-2xl border border-line bg-panel px-4 py-2.5">
@@ -46,6 +48,13 @@ export default function KeyBar({
         <Toggle on={drone} onChange={(value) => onChange({ drone: value })}>
           {drone ? "Drone on" : "Drone off"}
         </Toggle>
+        {/* Silence with no explanation reads as broken, so say which silence it is. */}
+        {!audioReady ? (
+          <span className="flex items-center gap-1.5 text-[12px] text-bone-dim">
+            <SpeakerSimpleSlash size={15} weight="bold" />
+            tap anywhere to turn sound on
+          </span>
+        ) : null}
         <div className="ml-auto flex items-center gap-2">
           <ThemeButton theme={theme} onChange={(next) => onChange({ theme: next })} />
           <button
