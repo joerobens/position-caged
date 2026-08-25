@@ -8,6 +8,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useSync } from "@/hooks/useSync";
 import { syncConfigured } from "@/lib/supabase";
 import type { ThemePreference } from "@/lib/theme";
+import { ICON } from "@/lib/icons";
 
 const LINKS = [
   { href: "/play", label: "Play" },
@@ -67,7 +68,7 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
             className="chip ml-auto flex flex-none items-center gap-2 px-3"
           >
             <UserCircle
-              size={17}
+              size={ICON.md}
               weight={sync.active ? "fill" : "bold"}
               style={sync.active && !sync.pending && !sync.problem ? { color: "var(--accent)" } : undefined}
             />
@@ -85,7 +86,7 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
             update({ theme: THEME_ORDER[(THEME_ORDER.indexOf(settings.theme) + 1) % THEME_ORDER.length] })
           }
         >
-          <Icon size={17} weight="bold" />
+          <Icon size={ICON.md} weight="bold" />
         </button>
       </nav>
     </header>

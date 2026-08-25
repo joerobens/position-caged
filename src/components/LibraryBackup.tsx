@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { DownloadSimple, UploadSimple } from "@phosphor-icons/react";
 import { useLibrary } from "@/hooks/useLibrary";
 import { addSong, setLyrics } from "@/lib/songStore";
+import { ICON } from "@/lib/icons";
 
 /**
  * The library lives in one browser and nowhere else, so it is one cleared cache
@@ -56,11 +57,11 @@ export default function LibraryBackup() {
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button type="button" className="chip flex items-center gap-2" onClick={save} disabled={!songs && !words}>
-          <DownloadSimple size={15} weight="bold" />
+          <DownloadSimple size={ICON.sm} weight="bold" />
           Save a copy
         </button>
         <button type="button" className="chip flex items-center gap-2" onClick={() => input.current?.click()}>
-          <UploadSimple size={15} weight="bold" />
+          <UploadSimple size={ICON.sm} weight="bold" />
           Bring one in
         </button>
         <input

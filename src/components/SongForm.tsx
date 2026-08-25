@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import GeniusSearch from "@/components/GeniusSearch";
 import { TUNINGS, effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import LyricsFinder from "@/components/LyricsFinder";
+import ChartTemplates from "@/components/ChartTemplates";
+import { nextSectionName } from "@/lib/chartTemplates";
 import { KEYS, type Tonality } from "@/lib/music";
 import { chartToText, textToChart } from "@/lib/chartText";
 import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
@@ -34,6 +36,7 @@ export default function SongForm({
   const [capo, setCapo] = useState(initial?.capo ? String(initial.capo) : "");
   const [tuning, setTuning] = useState(initial?.tuning ?? "standard");
   const [pasting, setPasting] = useState(false);
+  const chartId = useId();
   const [feel, setFeel] = useState(initial?.feel ?? "");
   const [bpm, setBpm] = useState(initial?.bpm ? String(initial.bpm) : "");
   const [text, setText] = useState(initial ? chartToText(initial.chart) : "Verse: 1 1 4 1 | 1 5 1 1");
@@ -190,9 +193,22 @@ export default function SongForm({
         </label>
       </div>
 
-      <label className="flex flex-col gap-2">
-        <span className="label">Chart</span>
+      <div className="flex flex-col gap-3">
+        <label className="label" htmlFor={chartId}>
+          Chart
+        </label>
+        <ChartTemplates
+          steps={counting.steps}
+          relative={counting.relative}
+          tonality={tonality}
+          onPick={(bars) => {
+            // Append as its own section, named for how many are already there.
+            const line = `${nextSectionName(chart.length)}: ${bars}`;
+            setText((current) => (current.trim() ? `${current.replace(/\s+$/, "")}\n${line}` : line));
+          }}
+        />
         <textarea
+          id={chartId}
           value={text}
           onChange={(event) => setText(event.target.value)}
           rows={Math.max(3, text.split("\n").length + 1)}
@@ -204,7 +220,7 @@ export default function SongForm({
           <b className="font-medium text-bone">#</b> to shift a degree, a slash for an inversion, and{" "}
           <b className="font-medium text-bone">%</b> to hold.
         </span>
-      </label>
+      </div>
 
       <div className="rounded-xl border border-line bg-ink p-3">
         <span className="label">

@@ -12,6 +12,7 @@ import { findSet, findSong } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
+import { ICON } from "@/lib/icons";
 
 const MIN_SIZE = 18;
 const MAX_SIZE = 56;
@@ -96,7 +97,7 @@ export default function StageView({ slug }: { slug: string }) {
           aria-label="Leave the stand"
           className="chip flex flex-none items-center px-3"
         >
-          <ArrowLeft size={16} weight="bold" />
+          <ArrowLeft size={ICON.sm} weight="bold" />
         </Link>
         <span className="truncate text-[15px] font-medium">{song.title}</span>
         {set ? (
@@ -116,11 +117,11 @@ export default function StageView({ slug }: { slug: string }) {
         </span>
         <div className="ml-auto flex flex-none items-center gap-2">
           <button type="button" className="chip px-3" aria-label="Smaller text" onClick={() => resize(-3)}>
-            <Minus size={15} weight="bold" />
+            <Minus size={ICON.sm} weight="bold" />
           </button>
           <span className="w-9 text-center font-mono text-[12px] text-bone-dim">{size}</span>
           <button type="button" className="chip px-3" aria-label="Bigger text" onClick={() => resize(3)}>
-            <Plus size={15} weight="bold" />
+            <Plus size={ICON.sm} weight="bold" />
           </button>
           <button type="button" className="chip" aria-pressed={chartOpen} onClick={() => setChartOpen((open) => !open)}>
             Chart
@@ -184,7 +185,7 @@ export default function StageView({ slug }: { slug: string }) {
             style={{ opacity: previous ? 1 : 0.3 }}
             onClick={() => go(previous)}
           >
-            <CaretLeft size={18} weight="bold" />
+            <CaretLeft size={ICON.md} weight="bold" />
             <span className="truncate text-[13px]">{previous ? songTitle(previous) : "Start of the set"}</span>
           </button>
           <button
@@ -202,7 +203,7 @@ export default function StageView({ slug }: { slug: string }) {
                 </span>
               ) : null}
             </span>
-            <CaretRight size={18} weight="bold" />
+            <CaretRight size={ICON.md} weight="bold" />
           </button>
         </nav>
       ) : null}

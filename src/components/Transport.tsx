@@ -2,6 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import { Pause, Play } from "@phosphor-icons/react";
+import { ICON } from "@/lib/icons";
 
 type Props = {
   playing: boolean;
@@ -46,7 +47,7 @@ export default function Transport({ playing, onToggle, bpm, onBpm, beats, beat, 
           color: playing ? "var(--on-accent)" : "var(--accent)",
         }}
       >
-        {playing ? <Pause size={26} weight="fill" /> : <Play size={26} weight="fill" />}
+        {playing ? <Pause size={ICON.lg} weight="fill" /> : <Play size={ICON.lg} weight="fill" />}
       </button>
 
       <div className="flex flex-none items-baseline gap-2">

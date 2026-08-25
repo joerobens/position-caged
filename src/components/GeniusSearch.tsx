@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowSquareOut, MagnifyingGlass } from "@phosphor-icons/react";
 import type { GeniusHit } from "@/app/api/genius/search/route";
+import { ICON } from "@/lib/icons";
 
 /**
  * Look a song up so its title and artist are not typed by hand. Metadata only:
@@ -62,7 +63,7 @@ export default function GeniusSearch({
       <label className="flex flex-col gap-2">
         <span className="label">{caption}</span>
         <span className="flex items-center gap-2.5 rounded-[10px] border border-line bg-ink px-3">
-          <MagnifyingGlass size={17} weight="bold" className="flex-none text-bone-dim" />
+          <MagnifyingGlass size={ICON.md} weight="bold" className="flex-none text-bone-dim" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -136,7 +137,7 @@ export function GeniusLink({ url }: { url: string }) {
       title="Open this song on Genius in a new tab"
     >
       Open on Genius
-      <ArrowSquareOut size={13} weight="bold" />
+      <ArrowSquareOut size={ICON.sm} weight="bold" />
     </a>
   );
 }

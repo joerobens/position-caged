@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, Plus, X } from "@phosphor-icons/react";
 import { useLibrary } from "@/hooks/useLibrary";
 import { allSongs, findSet, moveInSet, removeSet, saveSet } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
+import { ICON } from "@/lib/icons";
 
 export default function SetEditor({ id }: { id: string }) {
   const library = useLibrary();
@@ -81,7 +82,7 @@ export default function SetEditor({ id }: { id: string }) {
                   style={{ opacity: index === 0 ? 0.3 : 1 }}
                   onClick={() => saveSet(moveInSet(set, index, -1))}
                 >
-                  <ArrowUp size={14} weight="bold" />
+                  <ArrowUp size={ICON.sm} weight="bold" />
                 </button>
                 <button
                   type="button"
@@ -91,7 +92,7 @@ export default function SetEditor({ id }: { id: string }) {
                   style={{ opacity: index === inSet.length - 1 ? 0.3 : 1 }}
                   onClick={() => saveSet(moveInSet(set, index, 1))}
                 >
-                  <ArrowDown size={14} weight="bold" />
+                  <ArrowDown size={ICON.sm} weight="bold" />
                 </button>
                 <button
                   type="button"
@@ -99,7 +100,7 @@ export default function SetEditor({ id }: { id: string }) {
                   aria-label={`Take ${song!.title} out`}
                   onClick={() => saveSet({ ...set, slugs: set.slugs.filter((slug) => slug !== song!.slug) })}
                 >
-                  <X size={14} weight="bold" />
+                  <X size={ICON.sm} weight="bold" />
                 </button>
               </span>
             </li>
@@ -109,7 +110,7 @@ export default function SetEditor({ id }: { id: string }) {
 
       <div className="mt-4">
         <button type="button" className="chip flex items-center gap-2" onClick={() => setAdding((open) => !open)}>
-          <Plus size={15} weight="bold" />
+          <Plus size={ICON.sm} weight="bold" />
           Add a song
         </button>
         {adding ? (

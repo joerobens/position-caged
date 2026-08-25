@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { CaretRight } from "@phosphor-icons/react";
 import type { LyricHit } from "@/app/api/lyrics/route";
+import { ICON } from "@/lib/icons";
 
 /**
  * Fetches the words for a song you already have.
@@ -102,7 +103,7 @@ export default function LyricsFinder({
                     <span className="block truncate text-[12px] text-bone-dim">{hit.artist}</span>
                   </span>
                   <span className="flex-none font-mono text-[11px] text-bone-dim">{hit.words} words</span>
-                  <CaretRight size={15} weight="bold" className="flex-none text-bone-dim" />
+                  <CaretRight size={ICON.sm} weight="bold" className="flex-none text-bone-dim" />
                 </button>
               </li>
             ))}

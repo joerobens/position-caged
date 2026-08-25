@@ -7,6 +7,7 @@ import { useSession } from "@/hooks/useSession";
 import { useSync } from "@/hooks/useSync";
 import { releaseLibrary } from "@/lib/songStore";
 import { getSupabase, syncConfigured } from "@/lib/supabase";
+import { ICON } from "@/lib/icons";
 
 /**
  * Signing in, and saying honestly where the data is. Everything on screen still
@@ -63,24 +64,24 @@ export default function SyncPanel() {
           <p className="mt-2 flex flex-wrap items-center gap-2 text-[13.5px]">
             {sync.problem ? (
               <>
-                <CloudSlash size={17} weight="bold" className="text-bone-dim" />
+                <CloudSlash size={ICON.md} weight="bold" className="text-bone-dim" />
                 <span className="text-bone">Not reaching the database</span>
               </>
             ) : sync.busy ? (
               <>
-                <ArrowsClockwise size={17} weight="bold" className="text-bone-dim" />
+                <ArrowsClockwise size={ICON.md} weight="bold" className="text-bone-dim" />
                 <span className="text-bone">Syncing</span>
               </>
             ) : sync.pending ? (
               <>
-                <WarningCircle size={17} weight="bold" className="text-bone-dim" />
+                <WarningCircle size={ICON.md} weight="bold" className="text-bone-dim" />
                 <span className="text-bone">
                   {sync.pending} change{sync.pending === 1 ? "" : "s"} waiting to go up
                 </span>
               </>
             ) : (
               <>
-                <CheckCircle size={17} weight="fill" style={{ color: "var(--accent)" }} />
+                <CheckCircle size={ICON.md} weight="fill" style={{ color: "var(--accent)" }} />
                 <span className="text-bone">Everything is on the database</span>
               </>
             )}
@@ -101,7 +102,7 @@ export default function SyncPanel() {
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" className="chip flex items-center gap-2" disabled={sync.busy} onClick={sync.syncNow}>
-              <ArrowsClockwise size={15} weight="bold" />
+              <ArrowsClockwise size={ICON.sm} weight="bold" />
               {sync.busy ? "Syncing" : "Sync now"}
             </button>
             <button
@@ -124,7 +125,7 @@ export default function SyncPanel() {
       ) : sent ? (
         <>
           <p className="mt-2 flex items-center gap-2 text-[13.5px] text-bone">
-            <CheckCircle size={17} weight="fill" style={{ color: "var(--accent)" }} />
+            <CheckCircle size={ICON.md} weight="fill" style={{ color: "var(--accent)" }} />
             Link sent to {sent}
           </p>
           <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-bone-dim">

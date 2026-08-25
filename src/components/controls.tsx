@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Info as InfoIcon } from "@phosphor-icons/react";
+import { ICON } from "@/lib/icons";
 
 /**
  * The explainer next to a control. Opens on hover for a mouse and on tap for the
@@ -43,7 +44,7 @@ export function Info({ text }: { text: string }) {
         onClick={() => setOpen((current) => !current)}
         className="relative flex size-5 items-center justify-center rounded-full text-bone-dim transition-colors before:absolute before:-inset-3 before:content-[''] hover:text-bone focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone"
       >
-        <InfoIcon size={15} weight="bold" />
+        <InfoIcon size={ICON.sm} weight="bold" />
       </button>
       {open ? (
         <span

@@ -6,6 +6,7 @@ import { Segmented, Slider, Toggle } from "./controls";
 import { keyLabel, type Tonality } from "@/lib/music";
 import type { ThemePreference } from "@/lib/theme";
 import { useAudioReady } from "@/hooks/useAudioReady";
+import { ICON } from "@/lib/icons";
 
 /**
  * Always on, in both modes. The drone sounds the key rather than belonging to a
@@ -51,7 +52,7 @@ export default function KeyBar({
         {/* Silence with no explanation reads as broken, so say which silence it is. */}
         {!audioReady ? (
           <span className="flex items-center gap-1.5 text-[12px] text-bone-dim">
-            <SpeakerSimpleSlash size={15} weight="bold" />
+            <SpeakerSimpleSlash size={ICON.sm} weight="bold" />
             tap anywhere to turn sound on
           </span>
         ) : null}
@@ -65,7 +66,7 @@ export default function KeyBar({
           >
             <span className="hidden sm:inline">Drone settings</span>
             <span className="sm:hidden">Drone</span>
-            <CaretDown size={14} weight="bold" style={{ transform: open ? "rotate(180deg)" : undefined }} />
+            <CaretDown size={ICON.sm} weight="bold" style={{ transform: open ? "rotate(180deg)" : undefined }} />
           </button>
         </div>
       </div>
@@ -127,7 +128,7 @@ function ThemeButton({
       title={THEME_LABEL[theme]}
       onClick={() => onChange(THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length])}
     >
-      <Icon size={17} weight="bold" />
+      <Icon size={ICON.md} weight="bold" />
     </button>
   );
 }

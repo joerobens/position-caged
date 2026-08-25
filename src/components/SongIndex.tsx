@@ -7,6 +7,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { allSongs, isSeeded, unhideSeeded } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { chartChords, numberingOf } from "@/lib/nashville";
+import { ICON } from "@/lib/icons";
 
 export default function SongIndex() {
   const library = useLibrary();
@@ -37,7 +38,7 @@ export default function SongIndex() {
   return (
     <>
       <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-line bg-panel px-3">
-        <MagnifyingGlass size={17} weight="bold" className="flex-none text-bone-dim" />
+        <MagnifyingGlass size={ICON.md} weight="bold" className="flex-none text-bone-dim" />
         <input
           type="search"
           value={query}

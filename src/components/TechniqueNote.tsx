@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HandTap } from "@phosphor-icons/react";
+import { ICON } from "@/lib/icons";
 
 /**
  * The parts of the lesson a fretboard cannot draw. They are the difference between
@@ -26,7 +27,7 @@ export default function TechniqueNote() {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <HandTap size={16} weight="bold" />
+        <HandTap size={ICON.sm} weight="bold" />
         <span>
           The neck can show you the notes. It cannot show you these {open ? "" : "— five of them"}.
         </span>
