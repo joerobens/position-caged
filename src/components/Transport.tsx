@@ -43,7 +43,7 @@ export default function Transport({ playing, onToggle, bpm, onBpm, beats, beat, 
         style={{
           borderColor: "var(--accent)",
           background: playing ? "var(--accent)" : "transparent",
-          color: playing ? "var(--color-ink)" : "var(--accent)",
+          color: playing ? "var(--on-accent)" : "var(--accent)",
         }}
       >
         {playing ? <Pause size={26} weight="fill" /> : <Play size={26} weight="fill" />}

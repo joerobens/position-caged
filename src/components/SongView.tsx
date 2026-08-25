@@ -155,7 +155,7 @@ export default function SongView({ slug }: { slug: string }) {
         <Link
           href={practiceHref}
           className="chip ml-auto"
-          style={{ background: "var(--accent)", borderColor: "var(--accent)", color: "var(--color-ink)", fontWeight: 500 }}
+          style={{ background: "var(--accent)", borderColor: "var(--accent)", color: "var(--on-accent)", fontWeight: 500 }}
         >
           Practise these changes
         </Link>

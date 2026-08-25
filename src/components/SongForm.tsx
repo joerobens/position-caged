@@ -235,7 +235,7 @@ export default function SongForm({
           style={{
             background: "var(--accent)",
             borderColor: "var(--accent)",
-            color: "var(--color-ink)",
+            color: "var(--on-accent)",
             fontWeight: 500,
             opacity: ready ? 1 : 0.4,
           }}

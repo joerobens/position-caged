@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { CaretRight } from "@phosphor-icons/react";
 import type { LyricHit } from "@/app/api/lyrics/route";
 
 /**
@@ -90,13 +91,14 @@ export default function LyricsFinder({
                     onPick(hit.lyrics);
                     setHits(null);
                   }}
-                  className="flex min-h-11 w-full items-center gap-4 py-3 text-left transition-opacity hover:opacity-70 active:scale-[0.99]"
+                  className="flex min-h-11 w-full items-center gap-4 rounded-[8px] py-3 text-left transition-opacity hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone active:scale-[0.99]"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[14px] text-bone">{hit.album ?? hit.track}</span>
                     <span className="block truncate text-[12px] text-bone-dim">{hit.artist}</span>
                   </span>
                   <span className="flex-none font-mono text-[11px] text-bone-dim">{hit.words} words</span>
+                  <CaretRight size={15} weight="bold" className="flex-none text-bone-dim" />
                 </button>
               </li>
             ))}

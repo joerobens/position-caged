@@ -49,6 +49,10 @@
  */
 :root {
   --accent: #4fc7a1;
+  /* The accent does not flip between themes, so its label must not either.
+     --color-ink goes near-white in light mode, which left every accent-filled
+     control at 1.75:1 against a 4.5:1 requirement. */
+  --on-accent: #12100e;
   /* One gutter value, so the sticky neck can bleed out to the screen edges. */
   --gutter: max(14px, env(safe-area-inset-left), env(safe-area-inset-right));
 }
@@ -103,7 +107,7 @@ body {
   .chip[data-on="true"] {
     background: var(--accent);
     border-color: var(--accent);
-    color: var(--color-ink);
+    color: var(--on-accent);
     font-weight: 500;
   }
 
@@ -128,7 +132,7 @@ body {
   }
   .segmented > button[aria-pressed="true"] {
     background: var(--accent);
-    color: var(--color-ink);
+    color: var(--on-accent);
     font-weight: 500;
   }
 
