@@ -1,11 +1,14 @@
 import { EQUIVALENT_SCALE, SCALES, type Tonality } from "./music";
-import { SPIDER_PATTERNS, type Drill, type SpiderPattern } from "./drills";
+import { SPIDER_PATTERNS, type BoxMode, type Drill, type SpiderPattern } from "./drills";
 import type { PentShape } from "./pentatonic";
 import type { ThemePreference } from "./theme";
 
 /** Where the next shape comes from in the CAGED drill. */
 export type AdvanceMode = "up" | "down" | "random";
-export type Mode = "learn" | "practice";
+/** What you are doing. Technique is deliberately outside the systems. */
+export type Mode = "learn" | "drill" | "technique";
+/** What you are working on. */
+export type System = "neck" | "chords" | "scales" | "blues";
 export type Zoom = "position" | "neck";
 /** None is the one that tests whether you know the shape or are reading it. */
 export type Labels = "degrees" | "notes" | "none";
@@ -52,9 +55,12 @@ export type Settings = {
   theme: ThemePreference;
   /** Lyric size on the stand, in pixels. */
   lyricSize: number;
-  /** Reading the neck, or playing to the clock. */
+  /** Reading the neck, playing to the clock, or working the fingers. */
   mode: Mode;
+  system: System;
   drill: Drill;
+  /** Where the pentatonic drill sends you next. */
+  boxMode: BoxMode;
   spiderStartFret: number;
   spiderPattern: SpiderPattern;
   /** Come back down as well as going up. */
@@ -94,7 +100,9 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   lyricSize: 26,
   mode: "learn",
+  system: "chords",
   drill: "caged",
+  boxMode: "up",
   spiderStartFret: 5,
   spiderPattern: "1-2-3-4",
   spiderBoth: true,
@@ -121,6 +129,21 @@ export function loadSettings(): Settings {
     if (stored.advanceMode === "pair") {
       stored.advanceMode = "up";
       stored.drill = "slide";
+    }
+    /*
+     * Play used to be two modes and a pile of booleans deciding what the neck
+     * showed. It is a mode and a system now, so an old setting has to be read
+     * back into the pair it was really expressing.
+     */
+    const legacy = stored as Partial<Settings> & { rootMap?: boolean; landmark?: boolean; changes?: boolean };
+    if (!legacy.system) {
+      legacy.system = legacy.landmark ? "scales" : legacy.rootMap ? "neck" : legacy.changes ? "blues" : "chords";
+    }
+    if ((stored.mode as string) === "practice") {
+      stored.mode = stored.drill === "spider" ? "technique" : "drill";
+      if (stored.mode === "drill" && stored.drill) {
+        legacy.system = stored.drill === "changes" ? "blues" : stored.drill === "boxes" ? "scales" : "chords";
+      }
     }
     const parsed = { ...DEFAULT_SETTINGS, ...(stored as Partial<Settings>) };
     parsed.scale = scaleForTonality(parsed.scale, parsed.tonality);

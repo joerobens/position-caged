@@ -1,25 +1,38 @@
 import { FRET_COUNT } from "./music";
 
-export type Drill = "caged" | "slide" | "spider" | "changes";
+export type Drill = "caged" | "slide" | "boxes" | "changes" | "spider";
 
-export const DRILLS: { id: Drill; name: string; blurb: string }[] = [
+/** Which system a drill belongs to. Technique belongs to none, which is the point. */
+export type DrillSystem = "chords" | "scales" | "blues" | "technique";
+
+export const DRILLS: { id: Drill; system: DrillSystem; name: string; blurb: string }[] = [
   {
     id: "caged",
-    name: "CAGED changes",
+    system: "chords",
+    name: "Move between shapes",
     blurb: "The metronome moves you to another shape every few bars. Play through the position you land in.",
   },
   {
     id: "slide",
+    system: "chords",
     name: "Two-shape slide",
     blurb: "Back and forth between two positions you pick, so you drill the shift itself rather than the boxes.",
   },
   {
     id: "changes",
-    name: "Changes",
+    system: "blues",
+    name: "Walk the form",
     blurb: "The metronome walks the form a bar at a time. Stay where you are and follow the chord, aiming at its third.",
   },
   {
+    id: "boxes",
+    system: "scales",
+    name: "Box to box",
+    blurb: "The metronome walks you through the pentatonic boxes. The same idea as moving between chord shapes, for the map you actually solo from.",
+  },
+  {
     id: "spider",
+    system: "technique",
     name: "Spider walk",
     blurb: "The chromatic finger exercise, one note per pulse, with the neck showing you where you are in it.",
   },
@@ -90,4 +103,17 @@ export function spiderSequence({ startFret, pattern, both, shift }: SpiderSettin
 export function spiderStepAt(sequence: SpiderStep[], pulse: number): number {
   if (!sequence.length) return 0;
   return ((pulse % sequence.length) + sequence.length) % sequence.length;
+}
+
+/** Where a pentatonic drill sends you next. */
+export type BoxMode = "up" | "landmarks" | "random";
+
+export const BOX_MODES: { value: BoxMode; label: string; title: string }[] = [
+  { value: "up", label: "Up the neck", title: "Boxes one to five in order" },
+  { value: "landmarks", label: "Landmarks only", title: "Back and forth between shapes one and four" },
+  { value: "random", label: "Random", title: "Any other box" },
+];
+
+export function drillsFor(system: DrillSystem) {
+  return DRILLS.filter((drill) => drill.system === system);
 }
