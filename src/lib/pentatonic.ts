@@ -69,6 +69,9 @@ export type RunNote = {
   slid: boolean;
 };
 
+/** A slide ends a group, so nothing is played between it and the next note. */
+export const endsGroup = (note: RunNote) => note.slid;
+
 /**
  * The diagonal extension: the same five notes climbing the neck in groups, each
  * group ending in a slide. Starting two frets below the box is what turns a box
@@ -76,6 +79,9 @@ export type RunNote = {
  */
 export function diagonalRun(minorRoot: number, shape: PentShape, octave = 0): RunNote[] {
   const box = pentBox(minorRoot, shape, octave);
+  // The run starts two frets below the box. A box at the nut has nothing below
+  // it, so it has no extension: what came back was the box again, not a run.
+  if (box.low < 2) return [];
   const notes: RunNote[] = [];
   let from = box.low - 2;
 

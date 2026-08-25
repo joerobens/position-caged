@@ -17,7 +17,7 @@ import { BOX_MODES, SPIDER_PATTERNS, drillsFor, spiderSequence, spiderStepAt, ty
 import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
 import { scaleForTonality, type AdvanceMode, type Mode, type Settings, type System } from "@/lib/settings";
 import { PROGRESSIONS, chordAt, nearestPosition, type Progression } from "@/lib/progressions";
-import { LANDMARKS, PENT_SHAPES, relativeMinor, type PentShape } from "@/lib/pentatonic";
+import { LANDMARKS, PENT_SHAPES, relativeMajor, relativeMinor, type PentShape } from "@/lib/pentatonic";
 import { deriveView } from "@/lib/view";
 import { paletteFor } from "@/lib/theme";
 import { useTheme } from "@/hooks/useTheme";
@@ -336,7 +336,11 @@ export default function Page() {
   const statusLine = view.spiderDrawn
     ? `technique · spider walk · ${settings.spiderPattern}`
     : view.landmarkDrawn
-      ? `${KEYS[settings.tonality === "minor" ? settings.root : relativeMinor(settings.root)]} minor pentatonic · box ${settings.pentShape}`
+      ? // Named for the key you are in, not for whichever name the boxes happen to
+        // be built from. Picking C major and being told A minor is a small lie.
+        `${KEYS[settings.root]} ${settings.tonality} pentatonic · ${
+          settings.pentLandmarks ? "both landmarks" : `box ${settings.pentShape}`
+        }`
       : chord
         ? `${keyLabel(settings.root, settings.tonality)} · bar ${(activeBar % progression.bars.length) + 1} · ${chord.name} (${chord.roman})`
         : view.rootMapDrawn
@@ -835,10 +839,13 @@ export default function Page() {
               Box {settings.pentShape} of the {KEYS[settings.tonality === "minor" ? settings.root : relativeMinor(settings.root)]}{" "}
               minor pentatonic
             </b>
-            {LANDMARKS.includes(settings.pentShape) ? ", one of the two landmarks" : ""}. The filled dot is the minor
-            root, under your index finger; the ringed one is the major root, under your pinky, and it is the same box
-            either way. The faint box is that shape an octave away. The line is the diagonal run: two frets below the
-            box, notes in pairs, a slide at the end of each pair.
+            {LANDMARKS.includes(settings.pentShape) ? ", one of the two landmarks" : ""}. The filled dot is{" "}
+            {settings.tonality === "major" ? "the major root, under your pinky" : "the minor root, under your index finger"}
+            , which is home in this key. The ringed one is the other root: the same box is{" "}
+            {KEYS[settings.tonality === "minor" ? settings.root : relativeMinor(settings.root)]} minor and{" "}
+            {KEYS[settings.tonality === "major" ? settings.root : relativeMajor(settings.root)]} major, and which is
+            home depends only on the key you are in. The line is the diagonal run: two frets below the box, notes in
+            pairs, a slide at the end of each pair.
           </>
         ) : view.allShapes ? (
           <>

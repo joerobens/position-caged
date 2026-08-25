@@ -290,10 +290,14 @@ function Fretboard({
               y: stringY(string),
               midi: STRING_MIDI[string] + fret,
               degree,
-              /** The root as a minor key, under the index finger on the low E. */
-              minorRootHere: degree === 0,
-              /** The same box read as a major key, three semitones up. */
-              majorRootHere: degree === 3,
+              /*
+               * A box is two scales, and which one you are in decides which note
+               * is home. Minor puts your index finger on the root, major puts
+               * your pinky on it, so the filled dot follows the key rather than
+               * always being the minor one.
+               */
+              homeRootHere: degree === (tonality === "major" ? 3 : 0),
+              otherRootHere: degree === (tonality === "major" ? 0 : 3),
               primary: both ? true : index === 0,
               tone: both ? shapeColour(box.shape) : colour,
               shape: box.shape,
@@ -313,7 +317,7 @@ function Fretboard({
       : [];
 
     return { boxes, dots, run, both, isLandmark: both || LANDMARKS.includes(shape as PentShape), shapeColour };
-  }, [landmark, palette, colour]);
+  }, [landmark, palette, colour, tonality]);
 
   const notes = useMemo(() => {
     if (allShapes || rootMap || landmark || spiderWindow) return [];
@@ -647,7 +651,10 @@ function Fretboard({
           {/* the diagonal run, drawn as the line it is */}
           {pentatonic.run.map((note, index) => {
             const previous = pentatonic.run[index - 1];
-            if (!previous) return null;
+            // A slide is the end of a group. Nothing is played between it and the
+            // next note, so joining them drew a long line back down the neck that
+            // looked like part of the run and was not.
+            if (!previous || previous.slid) return null;
             return (
               <line
                 key={`runline-${note.key}`}
@@ -684,12 +691,12 @@ function Fretboard({
               style={onPlayNote ? { cursor: "pointer" } : undefined}
             >
               <circle cx={note.x} cy={note.y} r={15} fill="transparent" />
-              {note.minorRootHere || note.majorRootHere ? (
+              {note.homeRootHere || note.otherRootHere ? (
                 <>
                   {/* Two roots, because the box is two scales: the minor under your
                       index finger, the major under your pinky. */}
-                  <circle cx={note.x} cy={note.y} r={12} fill={note.minorRootHere ? note.tone : palette.dotFill} />
-                  {note.majorRootHere ? (
+                  <circle cx={note.x} cy={note.y} r={12} fill={note.homeRootHere ? note.tone : palette.dotFill} />
+                  {note.otherRootHere ? (
                     <circle cx={note.x} cy={note.y} r={12} fill="none" stroke={note.tone} strokeWidth={3} />
                   ) : null}
                   {/*
@@ -702,7 +709,7 @@ function Fretboard({
                     x={note.x}
                     y={note.y + 4}
                     textAnchor="middle"
-                    fill={note.minorRootHere ? palette.onAccent : note.tone}
+                    fill={note.homeRootHere ? palette.onAccent : note.tone}
                   >
                     {labels === "none" ? "" : noteNameAt(note.string, note.fret)}
                   </text>
