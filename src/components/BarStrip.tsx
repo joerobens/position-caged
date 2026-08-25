@@ -1,7 +1,6 @@
 "use client";
 
 import { chordAt, type Progression } from "@/lib/progressions";
-import type { Palette } from "@/lib/theme";
 
 /**
  * The form drawn as a chart, the way it is written on paper: four bars to a line
@@ -12,13 +11,11 @@ export default function BarStrip({
   progression,
   keyRoot,
   bar,
-  palette,
   onSelect,
 }: {
   progression: Progression;
   keyRoot: number;
   bar: number;
-  palette: Palette;
   onSelect?: (bar: number) => void;
 }) {
   const current = ((bar % progression.bars.length) + progression.bars.length) % progression.bars.length;
@@ -44,7 +41,9 @@ export default function BarStrip({
             style={{
               borderColor: active ? "var(--accent)" : "var(--color-line)",
               background: active ? "var(--accent)" : "transparent",
-              color: active ? palette.onAccent : "var(--color-bone)",
+              // The background is the CSS accent, which does not flip, so the
+              // label must come from the token that matches it.
+              color: active ? "var(--on-accent)" : "var(--color-bone)",
             }}
           >
             <span className="text-sm font-medium leading-none">{chord.name}</span>

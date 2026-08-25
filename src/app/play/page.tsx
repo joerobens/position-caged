@@ -606,7 +606,6 @@ export default function Page() {
                     progression={progression}
                     keyRoot={settings.root}
                     bar={settings.chordBar}
-                    palette={palette}
                     onSelect={(value) => update({ chordBar: value })}
                   />
                   <Field label="Region" info={INFO.region}>
@@ -703,7 +702,6 @@ export default function Page() {
                       progression={progression}
                       keyRoot={settings.root}
                       bar={activeBar}
-                      palette={palette}
                       onSelect={metronome.playing ? undefined : (value) => update({ chordBar: value })}
                     />
                     <p className="text-[13px] leading-relaxed text-bone-dim">

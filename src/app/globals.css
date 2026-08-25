@@ -103,6 +103,14 @@ body {
     @apply hover:border-bone-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone;
     touch-action: manipulation;
   }
+  .chip:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .chip:disabled:hover {
+    border-color: var(--color-line);
+  }
+
   .chip[aria-pressed="true"],
   .chip[data-on="true"] {
     background: var(--accent);
