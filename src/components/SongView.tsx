@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useLibrary } from "@/hooks/useLibrary";
 import SongForm from "@/components/SongForm";
 import { GeniusLink } from "@/components/GeniusSearch";
+import LyricsFinder from "@/components/LyricsFinder";
+import { useSession } from "@/hooks/useSession";
 import { addSong, findSong, hideSeeded, removeSong, setLyrics, slugify } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
@@ -19,6 +21,7 @@ export default function SongView({ slug }: { slug: string }) {
   const [editing, setEditing] = useState(false);
   const [editingChart, setEditingChart] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const { session } = useSession();
 
   if (!song) {
     return (
@@ -244,22 +247,29 @@ export default function SongView({ slug }: { slug: string }) {
         <div className="flex items-center gap-2">
           <span className="label">Lyrics</span>
           <div className="ml-auto flex items-center gap-2">
-            {/* The words live behind this link, not in the app. */}
+            {/* Where the words came from, so you can go back and check them. */}
             {song.sourceUrl ? <GeniusLink url={song.sourceUrl} /> : null}
             {lyrics ? (
-              <Link
-                href={`/songs/${song.slug}/play`}
-                className="chip chip-sm"
-                style={{ background: "var(--accent)", borderColor: "var(--accent)", color: "var(--color-ink)", fontWeight: 500 }}
-              >
-                Put it on the stand
-              </Link>
+              <>
+                <Link
+                  href={`/songs/${song.slug}/play`}
+                  className="chip chip-sm"
+                  data-on="true"
+                >
+                  Put it on the stand
+                </Link>
+                <button type="button" className="chip chip-sm" onClick={() => setEditing((current) => !current)}>
+                  {editing ? "Done" : "Edit"}
+                </button>
+              </>
+            ) : editing ? (
+              <button type="button" className="chip chip-sm" onClick={() => setEditing(false)}>
+                Done
+              </button>
             ) : null}
-            <button type="button" className="chip chip-sm" onClick={() => setEditing((current) => !current)}>
-              {editing ? "Done" : lyrics ? "Edit" : "Add"}
-            </button>
           </div>
         </div>
+
         {editing ? (
           <>
             <textarea
@@ -267,21 +277,37 @@ export default function SongView({ slug }: { slug: string }) {
               onChange={(event) => setLyrics(song.slug, event.target.value)}
               rows={14}
               placeholder="Paste the words here."
-              className="mt-3 w-full rounded-xl border border-line bg-ink p-3 text-[15px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
+              className="mt-4 w-full rounded-xl border border-line bg-ink p-3 text-[15px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
             />
             <p className="mt-2 text-[13px] leading-relaxed text-bone-dim">
-              Stored in this browser only, never sent anywhere and never committed. It will not follow you to another
-              device.
+              {session
+                ? "Saved as you type, and synced to your other devices. Never committed to the repo."
+                : "Saved as you type, in this browser only. Sign in from Account to keep them across devices."}
             </p>
           </>
         ) : lyrics ? (
-          <pre className="mt-3 whitespace-pre-wrap font-[family-name:var(--font-display)] text-[18px] leading-[1.85] text-bone">
+          <pre className="mt-4 whitespace-pre-wrap font-[family-name:var(--font-display)] text-[18px] leading-[1.85] text-bone">
             {lyrics}
           </pre>
         ) : (
-          <p className="mt-3 text-[13px] leading-relaxed text-bone-dim">
-            No words yet. Press Add and paste them in; they stay on this device.
-          </p>
+          /* Empty state: say what is missing, then offer both ways to fix it. */
+          <div className="mt-4 flex flex-col gap-4">
+            <p className="max-w-[58ch] text-[14px] leading-relaxed text-bone-dim">
+              No words yet. They are not in the chart, so they have to come from somewhere else.
+            </p>
+            <LyricsFinder
+              track={song.title}
+              artist={song.credit === "traditional" ? "" : song.credit}
+              onPick={(found) => {
+                setLyrics(song.slug, found);
+                setEditing(true);
+              }}
+            >
+              <button type="button" className="chip whitespace-nowrap" onClick={() => setEditing(true)}>
+                Paste them in
+              </button>
+            </LyricsFinder>
+          </div>
         )}
       </section>
     </main>
