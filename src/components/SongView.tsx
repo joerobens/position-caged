@@ -8,6 +8,7 @@ import SongForm from "@/components/SongForm";
 import { GeniusLink } from "@/components/GeniusSearch";
 import { addSong, findSong, hideSeeded, removeSong, setLyrics, slugify } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
+import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import { barOffsets, chartChords, chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 
 export default function SongView({ slug }: { slug: string }) {
@@ -44,12 +45,15 @@ export default function SongView({ slug }: { slug: string }) {
   // With a capo on, the chord you finger is not the chord that sounds. The shapes
   // are what you need in front of you, so those are what the chart shows.
   const capo = song.capo ?? 0;
-  const playRoot = shapeRoot(spellRoot, capo);
+  // A uniform retuning is a capo with the sign flipped, so the two combine.
+  const tuning = tuningOf(song.tuning);
+  const held = effectiveCapo(capo, song.tuning);
+  const playRoot = shapeRoot(spellRoot, held);
   const chords = chartChords(
     song.chart.flatMap((section) => section.bars),
     numbering.steps,
   );
-  const practiceHref = `/play?mode=practice&drill=changes&key=${shapeRoot(root, capo)}&tonality=${song.tonality}&bars=${encodeURIComponent(
+  const practiceHref = `/play?mode=practice&drill=changes&key=${shapeRoot(root, held)}&tonality=${song.tonality}&bars=${encodeURIComponent(
     barOffsets(song.chart[0].bars, numbering.steps)
       .map((offset) => (offset + (numbering.relative ? 3 : 0)) % 12)
       .join(","),
@@ -71,10 +75,16 @@ export default function SongView({ slug }: { slug: string }) {
           key <b className="font-medium text-bone">{KEYS[root]} {song.tonality}</b>
           {transpose !== null && transpose !== song.root ? ` (written in ${KEYS[song.root]})` : ""}
         </span>
-        {capo ? (
+        {needsRetune(song.tuning) ? (
           <span>
-            capo <b className="font-medium text-bone">{capo}</b>, so you play in{" "}
-            <b className="font-medium text-bone">{KEYS[shapeRoot(root, capo)]}</b>
+            tuned <b className="font-medium text-bone">{tuning.name.toLowerCase()}</b>{" "}
+            <span className="text-bone-dim">{tuning.label}</span>
+          </span>
+        ) : null}
+        {capo ? <span>capo <b className="font-medium text-bone">{capo}</b></span> : null}
+        {held ? (
+          <span>
+            so you play in <b className="font-medium text-bone">{KEYS[shapeRoot(root, held)]}</b>
           </span>
         ) : null}
         {song.feel ? <span>feel <b className="font-medium text-bone">{song.feel}</b></span> : null}

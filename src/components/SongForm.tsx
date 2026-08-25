@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import GeniusSearch from "@/components/GeniusSearch";
+import { TUNINGS, effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import { KEYS, type Tonality } from "@/lib/music";
 import { chartToText, textToChart } from "@/lib/chartText";
 import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
@@ -25,6 +26,7 @@ export default function SongForm({
   const [tonality, setTonality] = useState<Tonality>(initial?.tonality ?? "major");
   const [numbering, setNumbering] = useState<"relative-major" | "tonic">(initial?.numbering ?? "relative-major");
   const [capo, setCapo] = useState(initial?.capo ? String(initial.capo) : "");
+  const [tuning, setTuning] = useState(initial?.tuning ?? "standard");
   const [feel, setFeel] = useState(initial?.feel ?? "");
   const [bpm, setBpm] = useState(initial?.bpm ? String(initial.bpm) : "");
   const [text, setText] = useState(initial ? chartToText(initial.chart) : "Verse: 1 1 4 1 | 1 5 1 1");
@@ -33,7 +35,13 @@ export default function SongForm({
   const chart = textToChart(text);
   const counting = numberingOf({ root, tonality, numbering });
   const capoFret = capo ? Number(capo) : 0;
-  const playRoot = shapeRoot(counting.root, capoFret);
+  const tune = tuningOf(tuning);
+  // Capo and a uniform retuning pull in opposite directions on the same axis.
+  const held = effectiveCapo(capoFret, tuning);
+  const playRoot = shapeRoot(counting.root, held);
+  const why = [capoFret ? `a capo at ${capoFret}` : null, tune.shift ? `tuned ${tune.name.toLowerCase()}` : null]
+    .filter(Boolean)
+    .join(" and ");
   const tokens = chart.flatMap((section) => section.bars);
   const unknown = tokens.filter((bar) => parseChord(bar, counting.steps) === null);
   const ready = Boolean(title.trim()) && chart.length > 0 && unknown.length === 0;
@@ -47,6 +55,7 @@ export default function SongForm({
       tonality,
       numbering: tonality === "minor" ? numbering : undefined,
       capo: capo ? Number(capo) : undefined,
+      tuning: tuning === "standard" ? undefined : tuning,
       feel: feel.trim() || undefined,
       bpm: bpm ? Number(bpm) : undefined,
       chart,
@@ -96,11 +105,16 @@ export default function SongForm({
             </button>
           ))}
         </div>
-        {capoFret ? (
+        {held ? (
           <p className="text-[13px] leading-relaxed text-bone-dim">
-            With a capo at {capoFret} you will be holding{" "}
-            <b className="font-medium text-bone">{KEYS[shapeRoot(root, capoFret)]}</b> shapes. Put the key the song
+            With {why} you will be holding{" "}
+            <b className="font-medium text-bone">{KEYS[shapeRoot(root, held)]}</b> shapes. Put the key the song
             sounds in here and the chart works out the rest.
+          </p>
+        ) : needsRetune(tuning) ? (
+          <p className="text-[13px] leading-relaxed text-bone-dim">
+            {tune.name} moves the strings by different amounts, so the shapes are yours to find. The numbers on the
+            chart do not change — they never depend on the tuning.
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-3">
@@ -133,6 +147,21 @@ export default function SongForm({
             onChange={(event) => setCapo(event.target.value.replace(/\D/g, ""))}
             className="min-h-11 rounded-[10px] border border-line bg-ink px-3 text-sm text-bone outline-none focus-visible:border-bone-dim"
           />
+        </label>
+        <label className="flex min-w-[190px] flex-col gap-2">
+          <span className="label">Tuning</span>
+          <select
+            value={tuning}
+            onChange={(event) => setTuning(event.target.value)}
+            className="min-h-11 rounded-[10px] border border-line bg-ink px-3 text-sm text-bone outline-none focus-visible:border-bone-dim"
+          >
+            {TUNINGS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+                {option.id === "standard" ? "" : ` — ${option.label}`}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="flex w-24 flex-col gap-2">
           <span className="label">Bpm</span>

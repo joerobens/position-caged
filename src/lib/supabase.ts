@@ -36,6 +36,8 @@ export type RemoteSong = {
   tonality: "major" | "minor";
   numbering: "relative-major" | "tonic" | null;
   capo: number | null;
+  tuning: string | null;
+  source_url: string | null;
   feel: string | null;
   bpm: number | null;
   chart: { name: string; bars: string[] }[];

@@ -14,6 +14,8 @@ export type Song = {
   root: number;
   tonality: Tonality;
   capo?: number;
+  /** Tuning id from lib/tunings, absent meaning standard. */
+  tuning?: string;
   feel?: string;
   bpm?: number;
   chart: ChartSection[];

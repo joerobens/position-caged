@@ -10,6 +10,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { findSet, findSong } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
+import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 
 const MIN_SIZE = 18;
@@ -81,7 +82,8 @@ export default function StageView({ slug }: { slug: string }) {
 
   const numbering = numberingOf(song);
   // On a stand you need the shape under your fingers, not the concert pitch.
-  const playRoot = shapeRoot(numbering.root, song.capo);
+  const playRoot = shapeRoot(numbering.root, effectiveCapo(song.capo, song.tuning));
+  const inTuning = tuningOf(song.tuning).id;
   const size = Math.min(MAX_SIZE, Math.max(MIN_SIZE, settings.lyricSize));
   const resize = (delta: number) => update({ lyricSize: Math.min(MAX_SIZE, Math.max(MIN_SIZE, size + delta)) });
 
@@ -102,10 +104,15 @@ export default function StageView({ slug }: { slug: string }) {
             {set.name} · {at + 1} of {set.slugs.length}
           </span>
         ) : null}
+        {needsRetune(song.tuning) ? (
+          <span className="flex-none rounded-[6px] bg-bone px-2 py-0.5 font-mono text-[12px] font-medium text-ink">
+            {tuningOf(song.tuning).label}
+          </span>
+        ) : null}
         <span className="font-mono text-[13px] text-bone-dim">
-          {song.capo
-            ? `capo ${song.capo} · ${KEYS[shapeRoot(song.root, song.capo)]} shapes · sounds ${KEYS[song.root]}`
-            : `${KEYS[song.root]} ${song.tonality}`}
+          {effectiveCapo(song.capo, song.tuning)
+            ? `${song.capo ? `capo ${song.capo} · ` : ""}${KEYS[shapeRoot(song.root, effectiveCapo(song.capo, song.tuning))]} shapes · sounds ${KEYS[song.root]}`
+            : `${song.capo ? `capo ${song.capo} · ` : ""}${KEYS[song.root]} ${song.tonality}`}
         </span>
         <div className="ml-auto flex flex-none items-center gap-2">
           <button type="button" className="chip px-3" aria-label="Smaller text" onClick={() => resize(-3)}>
@@ -187,7 +194,14 @@ export default function StageView({ slug }: { slug: string }) {
             style={{ opacity: next ? 1 : 0.3 }}
             onClick={() => go(next)}
           >
-            <span className="truncate text-[13px]">{next ? songTitle(next) : "End of the set"}</span>
+            <span className="flex min-w-0 flex-col items-center leading-tight">
+              <span className="truncate text-[13px]">{next ? songTitle(next) : "End of the set"}</span>
+              {retuneFor(next) ? (
+                <span className="mt-0.5 truncate rounded-[5px] bg-bone px-1.5 font-mono text-[11px] font-medium text-ink">
+                  retune {retuneFor(next)}
+                </span>
+              ) : null}
+            </span>
             <CaretRight size={18} weight="bold" />
           </button>
         </nav>
@@ -197,5 +211,14 @@ export default function StageView({ slug }: { slug: string }) {
 
   function songTitle(target: string) {
     return findSong(library, target)?.title ?? target;
+  }
+
+  /** The tuning the next song wants, when it is not the one you are already in. */
+  function retuneFor(target: string | null) {
+    if (!target) return null;
+    const coming = findSong(library, target);
+    if (!coming) return null;
+    const to = tuningOf(coming.tuning);
+    return to.id === inTuning ? null : to.label;
   }
 }
