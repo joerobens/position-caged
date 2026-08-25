@@ -5,6 +5,7 @@ import GeniusSearch from "@/components/GeniusSearch";
 import { TUNINGS, effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import LyricsFinder from "@/components/LyricsFinder";
 import ChartTemplates from "@/components/ChartTemplates";
+import ChartFinder, { type FoundChart } from "@/components/ChartFinder";
 import { nextSectionName } from "@/lib/chartTemplates";
 import { KEYS, type Tonality } from "@/lib/music";
 import { chartToText, textToChart } from "@/lib/chartText";
@@ -200,6 +201,18 @@ export default function SongForm({
         <label className="label" htmlFor={chartId}>
           Chart
         </label>
+        <ChartFinder
+          track={title}
+          artist={credit.trim().toLowerCase() === "traditional" ? "" : credit}
+          auto={chosenSong}
+          onFound={(found: FoundChart) => {
+            setRoot(found.root);
+            setTonality(found.tonality);
+            setCapo(found.capo ? String(found.capo) : "");
+            if (found.tuning) setTuning(found.tuning);
+            setText(found.chart.map((section) => `${section.name}: ${section.bars.join(" ")}`).join("\n"));
+          }}
+        />
         <ChartTemplates
           steps={counting.steps}
           relative={counting.relative}

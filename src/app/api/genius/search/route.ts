@@ -62,10 +62,16 @@ export async function GET(request: Request) {
     // Genius indexes literature alongside music, so a search can come back with
     // book chapters sitting under the songs. A chapter is not a song.
     const isChapter = (title: string) => /\(?\bchap(ter)?\.? ?\d+\)?/i.test(title);
+    // Genius files romanizations and translations under house accounts. They are
+    // the same song written out again, not another recording of it.
+    const isHouseAccount = (artist: string) => /^genius\b/i.test(artist.trim());
+    const isRewrite = (title: string) => /\([^)]*(romani[sz]ed|translation|traduction|traduzione|übersetzung|tradução)[^)]*\)/i.test(title);
     const hits: GeniusHit[] = (body.response?.hits ?? [])
       .map((hit) => hit.result)
       .filter((result): result is NonNullable<typeof result> => Boolean(result))
       .filter((result) => !isChapter(result.title ?? ""))
+      .filter((result) => !isHouseAccount(result.primary_artist?.name ?? ""))
+      .filter((result) => !isRewrite(result.title ?? ""))
       .map((result) => ({
         id: result.id,
         title: result.title,

@@ -111,3 +111,17 @@ export function effectiveCapo(capo?: number | null, tuning?: string | null): num
 export function stringNames(tuning: Tuning): string[] {
   return tuning.strings.map((pitch) => NAMES[pitch % 12]);
 }
+
+/**
+ * Which of ours a tab's tuning is, if any.
+ *
+ * Tabs store MIDI note numbers with the highest string first, which is the
+ * other way round from here, and an octave lower or higher is still the same
+ * tuning by name.
+ */
+export function matchTuning(midiHighFirst: number[] | null | undefined): string | null {
+  if (!midiHighFirst || midiHighFirst.length !== 6) return null;
+  const pitches = [...midiHighFirst].reverse().map((note) => ((note % 12) + 12) % 12);
+  const found = TUNINGS.find((tuning) => tuning.strings.every((pitch, i) => pitch === pitches[i]));
+  return found ? found.id : null;
+}
