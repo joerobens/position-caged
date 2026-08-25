@@ -50,6 +50,37 @@ export function pentBox(minorRoot: number, shape: PentShape, octave = 0): Box {
   return { shape, low, strings };
 }
 
+/** The lowest fret this shape starts on, before any octave shift. */
+export function pentBoxLow(minorRoot: number, shape: PentShape): number {
+  return pentBox(minorRoot, shape, 0).low;
+}
+
+/** Every place this shape falls on the neck, lowest first. */
+export function boxOccurrences(minorRoot: number, shape: PentShape): Box[] {
+  return [0, 1, 2]
+    .map((octave) => pentBox(minorRoot, shape, octave))
+    .filter((box) => box.low >= 0 && box.low <= FRET_COUNT - 3);
+}
+
+/**
+ * The one to study, when a shape falls in more than one place.
+ *
+ * The five boxes are a ladder, not five unrelated diagrams: shape one, then two
+ * above it, then three, four, five, each overlapping the last, and then shape one
+ * again an octave up. Moving up and down the neck is the whole point of the
+ * system, so a shape is shown at the rung it occupies rather than at whichever
+ * copy of it happens to sit lowest.
+ *
+ * In A minor that ladder is 5, 8, 10, 12, 15. Taking the lowest copy instead put
+ * shape four at the nut and shape five at the third fret, below shape one, which
+ * is the ladder inside out.
+ */
+export function primaryBox(minorRoot: number, shape: PentShape): Box {
+  const anchor = pentBox(minorRoot, 1, 0).low;
+  const all = boxOccurrences(minorRoot, shape);
+  return all.find((box) => box.low >= anchor) ?? all[all.length - 1] ?? pentBox(minorRoot, shape);
+}
+
 /** Which shapes of this key fall on the neck, in order up it. */
 export function boxesOnNeck(minorRoot: number): Box[] {
   const out: Box[] = [];

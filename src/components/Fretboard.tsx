@@ -19,7 +19,16 @@ import type { Labels, Zoom } from "@/lib/settings";
 import type { SpiderStep } from "@/lib/drills";
 import type { Palette } from "@/lib/theme";
 import { APPROACH_ABOVE, APPROACH_BELOW, TARGET_THIRD, type Chord } from "@/lib/progressions";
-import { LANDMARKS, diagonalRun, landmarkBoxes, pentBox, relativeMajor, type PentShape } from "@/lib/pentatonic";
+import {
+  LANDMARKS,
+  boxOccurrences,
+  diagonalRun,
+  landmarkBoxes,
+  pentBoxLow,
+  primaryBox,
+  relativeMajor,
+  type PentShape,
+} from "@/lib/pentatonic";
 
 /** Neck geometry, in SVG user units. */
 const NUT_X = 64;
@@ -268,9 +277,11 @@ function Fretboard({
 
     // Both landmarks at once is the map: shape one, shape four, shape one again.
     // A single box is the same thing with its octave repeat behind it.
+    // The one you are studying first, then wherever else it falls, behind it.
+    const primary = both ? null : primaryBox(minorRoot, shape as PentShape);
     const boxes = both
       ? landmarkBoxes(minorRoot)
-      : [0, 1].map((octave) => pentBox(minorRoot, shape, octave)).filter((box) => box.low <= FRET_COUNT - 3);
+      : [primary!, ...boxOccurrences(minorRoot, shape as PentShape).filter((box) => box.low !== primary!.low)];
 
     // The two landmarks need telling apart, so each keeps one colour wherever it
     // turns up rather than borrowing whatever the chord shape happens to be.
@@ -306,8 +317,8 @@ function Fretboard({
       ),
     );
 
-    const run = showRun && !both
-      ? diagonalRun(minorRoot, shape as PentShape).map((note) => ({
+    const run = showRun && !both && primary
+      ? diagonalRun(minorRoot, shape as PentShape, Math.round((primary.low - pentBoxLow(minorRoot, shape as PentShape)) / 12)).map((note) => ({
           ...note,
           key: `run:${note.string}:${note.fret}`,
           x: fretX(note.fret),
@@ -413,7 +424,7 @@ function Fretboard({
         height={5 * STRING_GAP + 22}
         rx={10}
         fill={colour}
-        opacity={spiderWindow || landmark ? 0.04 : allShapes || rootMap ? 0.05 : zoom === "position" ? 0.06 : 0.09}
+        opacity={landmark ? 0 : spiderWindow ? 0.04 : allShapes || rootMap ? 0.05 : zoom === "position" ? 0.06 : 0.09}
       />
 
       {/* frets */}
