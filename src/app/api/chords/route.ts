@@ -70,6 +70,8 @@ export async function GET(request: Request) {
       source: { title: best.title, artist: best.artist, songId: best.songId },
       // MIDI notes, high string first, as the tab stores them.
       tuning: chart.tuning,
+      // True when nobody wrote the chords down and they were read off the notes.
+      derived: chart.derived,
       instrument: chart.instrument,
     });
   } catch (error) {

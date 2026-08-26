@@ -10,6 +10,8 @@
  */
 
 const UA = "Position (personal guitar practice tool; https://guitar.robens.au)";
+import { chordsFromNotes, settle } from "./chordsFromNotes";
+
 const CDN = "https://dqsljvtekg760.cloudfront.net";
 
 export type SongsterrHit = {
@@ -29,6 +31,8 @@ export type Chart = {
   /** MIDI notes, high string first, as the tab stores them. */
   tuning: number[] | null;
   instrument: string;
+  /** True when nobody wrote the chords down and they were read off the notes. */
+  derived: boolean;
 };
 
 type Beat = { chord?: { text?: string } };
@@ -94,6 +98,7 @@ async function resolve(songId: number): Promise<{ revision: string; token: strin
  */
 export async function chartFor(songId: number, tracks = 14): Promise<Chart | null> {
   const { revision, token } = await resolve(songId);
+  const guitars: Track[] = [];
 
   for (let index = 0; index < tracks; index++) {
     let track: Track;
@@ -103,6 +108,7 @@ export async function chartFor(songId: number, tracks = 14): Promise<Chart | nul
       break; // ran off the end of the track list
     }
     if (/bass|drum|percussion/i.test(track.instrument ?? "")) continue;
+    guitars.push(track);
 
     const bars = (track.measures ?? []).map((measure) => {
       const found: string[] = [];
@@ -115,14 +121,26 @@ export async function chartFor(songId: number, tracks = 14): Promise<Chart | nul
       return found;
     });
 
-    if (bars.some((bar) => bar.length)) {
-      return {
-        bars,
-        capo: typeof track.capo === "number" ? track.capo : 0,
-        tuning: Array.isArray(track.tuning) ? track.tuning : null,
-        instrument: track.instrument ?? "",
-      };
-    }
+    if (bars.some((bar) => bar.length)) return asChart(track, bars, false);
   }
-  return null;
+
+  // Nobody wrote them down. Read them off the notes instead, from whichever
+  // guitar part carries the most of the song.
+  const richest = guitars
+    .filter((track) => Array.isArray(track.tuning) && (track.measures?.length ?? 0) > 0)
+    .sort((a, b) => (b.measures?.length ?? 0) - (a.measures?.length ?? 0))[0];
+  if (!richest) return null;
+
+  const read = settle(chordsFromNotes(richest.measures ?? [], richest.tuning as number[]));
+  return read.some((bar) => bar.length) ? asChart(richest, read, true) : null;
+}
+
+function asChart(track: Track, bars: string[][], derived: boolean): Chart {
+  return {
+    bars,
+    capo: typeof track.capo === "number" ? track.capo : 0,
+    tuning: Array.isArray(track.tuning) ? track.tuning : null,
+    instrument: track.instrument ?? "",
+    derived,
+  };
 }

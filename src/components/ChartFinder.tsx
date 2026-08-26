@@ -33,6 +33,7 @@ export default function ChartFinder({
 }) {
   const [state, setState] = useState<"idle" | "looking" | "none" | "gated" | "failed">("idle");
   const [took, setTook] = useState<string | null>(null);
+  const [derived, setDerived] = useState(false);
   const ran = useRef<string | null>(null);
 
   const look = async () => {
@@ -56,6 +57,7 @@ export default function ChartFinder({
       const body = (await response.json()) as {
         chart: Omit<FoundChart, "tuning"> | null;
         tuning?: number[] | null;
+        derived?: boolean;
       };
       if (!body.chart) {
         setState("none");
@@ -69,6 +71,7 @@ export default function ChartFinder({
           (tuning && tuning !== "standard" ? `, ${tuningOf(tuning).name.toLowerCase()}` : "") +
           `, ${body.chart.chart.length} section${body.chart.chart.length === 1 ? "" : "s"}`,
       );
+      setDerived(body.derived === true);
       setState("idle");
     } catch {
       setState("failed");
@@ -93,8 +96,11 @@ export default function ChartFinder({
         {state === "looking" ? "Looking…" : took ? "Fetch again" : "Fetch the chart"}
       </button>
       {took ? (
-        <span className="text-[13px] text-bone-dim">
-          Took <b className="font-medium text-bone">{took}</b>. Check it against your ears.
+        <span className="text-[13px] leading-relaxed text-bone-dim">
+          <b className="font-medium text-bone">{took}</b>.{" "}
+          {derived
+            ? "Nobody wrote the chords on this tab, so they were read off the notes. Worth checking against your ears."
+            : "As the transcriber wrote them."}
         </span>
       ) : state === "none" ? (
         <span className="text-[13px] text-bone-dim">No chord chart for this one. Type it in below.</span>
