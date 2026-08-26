@@ -5,6 +5,7 @@ import CagedCycle from "@/components/theory/CagedCycle";
 import FollowingTheChanges from "@/components/theory/FollowingTheChanges";
 import NashvilleNumbers from "@/components/theory/NashvilleNumbers";
 import PentatonicsAndBlues from "@/components/theory/PentatonicsAndBlues";
+import ChordsOfAKey from "@/components/theory/ChordsOfAKey";
 import RootsAndOctaves from "@/components/theory/RootsAndOctaves";
 import { THEORY_PAGES, findTheoryPage } from "@/lib/theory";
 
@@ -13,6 +14,7 @@ const CONTENT: Record<string, () => React.ReactElement> = {
   "caged-cycle": CagedCycle,
   "roots-and-octaves": RootsAndOctaves,
   "following-the-changes": FollowingTheChanges,
+  "chords-of-a-key": ChordsOfAKey,
   "pentatonics-and-blues": PentatonicsAndBlues,
 };
 

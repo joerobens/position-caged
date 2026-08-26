@@ -31,8 +31,14 @@ export const THEORY_PAGES: TheoryPage[] = [
     blurb: "Playing the chord you are on instead of the key you are in.",
   },
   {
-    slug: "pentatonics-and-blues",
+    slug: "chords-of-a-key",
     n: "05",
+    title: "The chords of a key",
+    blurb: "Seven chords fall out of a scale, always in the same order, and most songs live inside them.",
+  },
+  {
+    slug: "pentatonics-and-blues",
+    n: "06",
     title: "Pentatonics and the blues blend",
     blurb: "Up major, down minor, and the two notes a fret apart that make it sound like blues.",
   },
