@@ -8,6 +8,7 @@ import SongForm from "@/components/SongForm";
 import { GeniusLink } from "@/components/GeniusSearch";
 import LyricsFinder from "@/components/LyricsFinder";
 import ChordFamily from "@/components/ChordFamily";
+import SongsOnThis from "@/components/SongsOnThis";
 import { useSession } from "@/hooks/useSession";
 import { addSong, findSong, hideSeeded, removeSong, setLyrics, slugify } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
@@ -241,6 +242,8 @@ export default function SongView({ slug }: { slug: string }) {
         numbering={numbering}
         used={song.chart.flatMap((section) => section.bars)}
       />
+
+      <SongsOnThis bars={song.chart[0]?.bars ?? []} />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="label">Play it in</span>
