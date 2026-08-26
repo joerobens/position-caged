@@ -107,6 +107,19 @@ body {
    * Before this they were the same pill, so nothing on the page told you
    * whether touching it would navigate, change a setting, or delete a song.
    */
+  /*
+   * Scroll without a visible bar. On the stand the words are paged sideways,
+   * and a horizontal scrollbar there would eat the height the fit just
+   * measured, which changes the fit, which moves the bar: a loop you can watch
+   * happening.
+   */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .btn {
     @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-line px-3.5 text-sm font-medium text-bone transition-colors;
     @apply hover:border-bone-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone;

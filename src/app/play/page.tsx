@@ -227,8 +227,16 @@ export default function Page() {
   // The accent follows the shape, so the whole interface tells you where you are.
   const accent = palette.shapes[position.name];
   useEffect(() => {
-    document.documentElement.style.setProperty("--accent", accent);
-    document.documentElement.style.setProperty("--fb-dim", palette.dim);
+    const root = document.documentElement;
+    root.style.setProperty("--accent", accent);
+    root.style.setProperty("--fb-dim", palette.dim);
+    // Put it back on the way out. Without this the shape colour followed you
+    // to every other page for the rest of the session, so the stand and the
+    // song pages quietly turned whatever colour Play was last showing.
+    return () => {
+      root.style.removeProperty("--accent");
+      root.style.removeProperty("--fb-dim");
+    };
   }, [accent, palette.dim]);
 
 

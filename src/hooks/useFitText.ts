@@ -34,6 +34,8 @@ export function useFitText<T extends HTMLElement>({
   const ref = useRef<T>(null);
   const [size, setSize] = useState(max);
   const [pages, setPages] = useState(1);
+  /** The box we last measured against, so our own changes cannot restart us. */
+  const measured = useRef({ width: 0, height: 0 });
 
   const measure = useCallback(() => {
     const el = ref.current;
@@ -69,6 +71,7 @@ export function useFitText<T extends HTMLElement>({
     const counted = width > 0 ? Math.max(1, Math.ceil(el.scrollWidth / width - 0.15)) : 1;
 
     el.style.fontSize = previous;
+    measured.current = { width: el.clientWidth, height: el.clientHeight };
     setSize(best);
     setPages(counted);
   }, [enabled, min, max]);
@@ -79,13 +82,31 @@ export function useFitText<T extends HTMLElement>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [measure, ...deps]);
 
-  // Rotating the iPad, or opening the chart, changes the box it has to fit in.
+  /*
+   * Rotating the iPad, or opening the chart, changes the box it has to fit in.
+   *
+   * This depends on the same content the fit does, not because it needs to
+   * re-run when the words change, but because the element does not exist on
+   * the first render: the library is read from storage, so the page has
+   * nothing to show yet and the ref is still empty. Watching the content means
+   * the observer attaches as soon as there is something to attach it to.
+   */
   useEffect(() => {
     if (!enabled) return;
     const el = ref.current;
     if (!el || typeof ResizeObserver === "undefined") return;
     let frame = 0;
-    const observer = new ResizeObserver(() => {
+    const observer = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentRect;
+      // Re-fit only when the box we have to fill actually changed. Resizing the
+      // type changes the content, and reacting to that would be a loop.
+      if (
+        box &&
+        Math.abs(box.width - measured.current.width) < 2 &&
+        Math.abs(box.height - measured.current.height) < 2
+      ) {
+        return;
+      }
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(measure);
     });
@@ -94,7 +115,8 @@ export function useFitText<T extends HTMLElement>({
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [enabled, measure]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, measure, ...deps]);
 
   return { ref, size, pages };
 }

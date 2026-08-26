@@ -135,6 +135,7 @@ export default function StageView({ slug }: { slug: string }) {
   // On a stand you need the shape under your fingers, not the concert pitch.
   const playRoot = shapeRoot(numbering.root, effectiveCapo(song.capo, song.tuning));
   const inTuning = tuningOf(song.tuning).id;
+  const hasChart = song.chart.some((section) => section.bars.length > 0);
   const manual = Math.min(MAX_SIZE, Math.max(MIN_SIZE, settings.lyricSize));
   const resize = (delta: number) => update({ lyricSize: Math.min(MAX_SIZE, Math.max(MIN_SIZE, manual + delta)) });
   const size = fit ? fitted : manual;
@@ -201,15 +202,22 @@ export default function StageView({ slug }: { slug: string }) {
               </button>
             </>
           )}
-          <button type="button" className="chip" aria-pressed={chartOpen} onClick={() => setChartOpen((open) => !open)}>
-            Chart
-          </button>
+          {hasChart ? (
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={chartOpen}
+              onClick={() => setChartOpen((open) => !open)}
+            >
+              Chart
+            </button>
+          ) : null}
         </div>
       </header>
 
-      {chartOpen ? (
+      {chartOpen && hasChart ? (
         <div className="border-b border-line px-[var(--gutter)] py-2">
-          {song.chart.map((section, sectionIndex) => (
+          {song.chart.filter((section) => section.bars.length > 0).map((section, sectionIndex) => (
             <div key={sectionIndex} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1">
               <span className="label w-16 flex-none">{section.name}</span>
               <div className="flex flex-wrap gap-1.5">
@@ -235,7 +243,7 @@ export default function StageView({ slug }: { slug: string }) {
           <pre
             ref={lyricRef}
             className={`h-full whitespace-pre-wrap font-[family-name:var(--font-display)] text-bone ${
-              fit ? "overflow-x-auto overflow-y-hidden" : "overflow-y-auto"
+              fit ? "no-scrollbar overflow-x-auto overflow-y-hidden" : "overflow-y-auto"
             }`}
             onScroll={(event) => {
               if (turning.current || !fit) return;
