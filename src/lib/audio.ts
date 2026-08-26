@@ -203,6 +203,42 @@ export class AudioEngine {
   }
 
   /** A short plucked tone, used by the fretboard when you tap a note. */
+  /**
+   * A chord, at a time you name.
+   *
+   * Scheduled against the audio clock rather than played now, so it can be
+   * queued by the same lookahead the click uses and lands exactly on the bar.
+   * The notes are spread by a few milliseconds because a chord on a guitar is
+   * a strum, not six strings hit at once, and the ear notices.
+   */
+  chord(time: number, midis: number[], volume = 0.5) {
+    const ctx = this.ensure();
+    if (!midis.length || volume <= 0) return;
+    midis.forEach((midi, index) => {
+      const at = time + index * 0.016;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      osc.type = "triangle";
+      osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+      filter.type = "lowpass";
+      // Opens on the attack and closes as it decays, which is roughly what a
+      // plucked string does and keeps a held chord from turning into an organ.
+      filter.frequency.setValueAtTime(2200, at);
+      filter.frequency.exponentialRampToValueAtTime(600, at + 1.2);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      // Quiet enough to play over. It is the backing, not the part.
+      const peak = (0.12 * volume) / Math.sqrt(midis.length);
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(peak, at + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 1.9);
+      osc.start(at);
+      osc.stop(at + 2);
+    });
+  }
+
   pluck(midi: number, volume = 0.5) {
     const ctx = this.ensure();
     const time = ctx.currentTime + 0.01;

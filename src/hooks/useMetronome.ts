@@ -18,6 +18,13 @@ export type MetronomeOptions = {
   /** Bars between shape changes. 0 is off. */
   advanceBars: number;
   onAdvance: () => void;
+  /**
+   * The notes to sound on the downbeat of a bar, or null for silence. Asked
+   * while the bar is being scheduled rather than when it arrives, so the chord
+   * is queued with the same lookahead as the click and lands with it.
+   */
+  chordFor?: (bar: number) => number[] | null;
+  chordVolume?: number;
 };
 
 /**
@@ -25,7 +32,16 @@ export type MetronomeOptions = {
  * events; a rAF loop drains them as they come due so the pips and the shape changes
  * land with the click rather than drifting away from it.
  */
-export function useMetronome({ bpm, beats, click, volume, advanceBars, onAdvance }: MetronomeOptions) {
+export function useMetronome({
+  bpm,
+  beats,
+  click,
+  volume,
+  advanceBars,
+  onAdvance,
+  chordFor,
+  chordVolume = 0,
+}: MetronomeOptions) {
   const [playing, setPlaying] = useState(false);
   const [beat, setBeat] = useState(-1);
   const [bar, setBar] = useState(0);
@@ -33,9 +49,9 @@ export function useMetronome({ bpm, beats, click, volume, advanceBars, onAdvance
   const [pulse, setPulse] = useState(0);
 
   // Latest values, so changing tempo mid-bar does not tear down the scheduler.
-  const options = useRef({ bpm, beats, click, volume, advanceBars, onAdvance });
+  const options = useRef({ bpm, beats, click, volume, advanceBars, onAdvance, chordFor, chordVolume });
   useEffect(() => {
-    options.current = { bpm, beats, click, volume, advanceBars, onAdvance };
+    options.current = { bpm, beats, click, volume, advanceBars, onAdvance, chordFor, chordVolume };
   });
 
   const queue = useRef<ScheduledEvent[]>([]);
@@ -65,12 +81,25 @@ export function useMetronome({ bpm, beats, click, volume, advanceBars, onAdvance
     setPlaying(true);
 
     timer.current = window.setInterval(() => {
-      const { bpm: currentBpm, beats: currentBeats, click: clickOn, volume: level, advanceBars: every } = options.current;
+      const {
+        bpm: currentBpm,
+        beats: currentBeats,
+        click: clickOn,
+        volume: level,
+        advanceBars: every,
+        chordFor: voicing,
+        chordVolume: chordLevel,
+      } = options.current;
       const secondsPerBeat = 60 / currentBpm;
       while (nextNoteTime.current < engine.now + LOOKAHEAD_SECONDS) {
         const time = nextNoteTime.current;
         const { beat: b, bar: currentBar, pulse: currentPulse } = counter.current;
         if (clickOn) engine.click(time, b === 0, level);
+        // The changes land on the downbeat, queued the same way the click is.
+        if (b === 0 && voicing && chordLevel > 0) {
+          const notes = voicing(currentBar);
+          if (notes?.length) engine.chord(time, notes, chordLevel);
+        }
         queue.current.push({ time, beat: b, bar: currentBar, pulse: currentPulse });
 
         let nextBeat = b + 1;

@@ -46,6 +46,9 @@ export type Settings = {
   showRun: boolean;
   /** Follow a progression rather than sitting on one chord. */
   changes: boolean;
+  /** Play the chords as they come round, so there is something to play over. */
+  soundChanges: boolean;
+  soundChangesVolume: number;
   progression: string;
   /** A chart handed over from a song page, as semitone offsets per bar. */
   customBars: string;
@@ -100,6 +103,8 @@ export const DEFAULT_SETTINGS: Settings = {
   pentLandmarks: true,
   showRun: true,
   changes: false,
+  soundChanges: true,
+  soundChangesVolume: 0.5,
   progression: "blues12",
   customBars: "",
   chordBar: 0,

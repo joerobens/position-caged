@@ -17,6 +17,7 @@ import { BOX_MODES, SPIDER_PATTERNS, drillsFor, spiderSequence, spiderStepAt, ty
 import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
 import { scaleForTonality, type AdvanceMode, type Mode, type Settings, type System } from "@/lib/settings";
 import { PROGRESSIONS, chordAt, nearestPosition, type Progression } from "@/lib/progressions";
+import { voice } from "@/lib/voicing";
 import { LANDMARKS, PENT_SHAPES, relativeMajor, relativeMinor, type PentShape } from "@/lib/pentatonic";
 import { deriveView } from "@/lib/view";
 import { paletteFor } from "@/lib/theme";
@@ -54,6 +55,8 @@ const INFO = {
   direction: "Where the next shape comes from. Up and down walk the neck in order; random stops you anticipating it.",
   pair: "The other half of the slide drill. It shows on the neck as a dashed box, so you can see where you are going before you get there.",
   tap: "Every dot on the neck is playable. Tap one to hear it, which is worth doing with the drone on: that is how a degree stops being a number and starts being a sound.",
+  backing:
+    "The chords of the progression, played as they come round, so there is something under you to play over. It lands on the downbeat of each bar with the click, and sits well below whatever you are playing.",
   click: "The click itself. Turning it off leaves the pips and the shape changes running silently, which is what you want over a backing track.",
   spiderStart: "The fret the index finger starts on. The exercise covers four frets from there, one per finger.",
   spiderPattern:
@@ -197,6 +200,21 @@ export default function Page() {
     update((current) => advancePatch(current, positions.length));
   }, [update, positions.length]);
 
+  /**
+   * The backing, when following changes. Asked for a bar while that bar is
+   * still being scheduled, so it reads the progression rather than any state
+   * that has already moved on.
+   */
+  const chordFor = useCallback(
+    (bar: number) => {
+      if (!view.changesDrawn || !settings.soundChanges) return null;
+      const sounding = chordAt(progression, settings.root, bar);
+      // The blues is all dominant sevenths, and without them it is not the blues.
+      return voice(sounding.root, false, true);
+    },
+    [view.changesDrawn, settings.soundChanges, settings.root, progression],
+  );
+
   const metronome = useMetronome({
     bpm: settings.bpm,
     beats: settings.beats,
@@ -204,6 +222,8 @@ export default function Page() {
     volume: settings.clickVolume,
     advanceBars: view.advanceBars,
     onAdvance: advance,
+    chordFor,
+    chordVolume: settings.soundChanges ? settings.soundChangesVolume : 0,
   });
 
   const spiderSteps = useMemo(
@@ -811,6 +831,29 @@ export default function Page() {
                   onChange={(value) => update({ clickVolume: value / 100 })}
                   display={`${Math.round(settings.clickVolume * 100)}%`}
                 />
+                {/* Only worth offering while there are changes to sound. */}
+                {view.changesDrawn ? (
+                  <>
+                    <Field label="Backing" info={INFO.backing}>
+                      <Toggle
+                        on={settings.soundChanges}
+                        onChange={(soundChanges) => update({ soundChanges })}
+                      >
+                        {settings.soundChanges ? "Chords on" : "Chords off"}
+                      </Toggle>
+                    </Field>
+                    {settings.soundChanges ? (
+                      <Slider
+                        label="Backing volume"
+                        value={Math.round(settings.soundChangesVolume * 100)}
+                        min={0}
+                        max={100}
+                        onChange={(value) => update({ soundChangesVolume: value / 100 })}
+                        display={`${Math.round(settings.soundChangesVolume * 100)}%`}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
               </div>
             </div>
           </section>
