@@ -8,6 +8,7 @@ import SongForm from "@/components/SongForm";
 import { GeniusLink } from "@/components/GeniusSearch";
 import LyricsFinder from "@/components/LyricsFinder";
 import ChordFamily from "@/components/ChordFamily";
+import SongShapes from "@/components/SongShapes";
 import SongsOnThis from "@/components/SongsOnThis";
 import { useSession } from "@/hooks/useSession";
 import { addSong, findSong, hideSeeded, removeSong, setLyrics, slugify } from "@/lib/songStore";
@@ -122,7 +123,7 @@ export default function SongView({ slug }: { slug: string }) {
           </Link>
         ) : null}
         <Link href={practiceHref} className="btn">
-          Practise these changes
+          Open on the fretboard
         </Link>
         {mine ? (
           <button type="button" className="btn" onClick={() => setEditingChart(true)}>
@@ -235,6 +236,8 @@ export default function SongView({ slug }: { slug: string }) {
           </span>
         ) : null}
       </div>
+
+      <SongShapes chords={chords} playRoot={playRoot} />
 
       <ChordFamily
         root={root}

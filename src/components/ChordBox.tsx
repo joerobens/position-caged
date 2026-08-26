@@ -1,0 +1,144 @@
+"use client";
+
+import { useMemo } from "react";
+import { useSettings } from "@/hooks/useSettings";
+import { useTheme } from "@/hooks/useTheme";
+import { paletteFor } from "@/lib/theme";
+import type { Position } from "@/lib/music";
+
+/**
+ * One chord, as a grip.
+ *
+ * The neck view answers where the notes are; this answers where the fingers
+ * go, which is the question you have while learning a song rather than while
+ * exploring one. It is drawn from the same shape table the fretboard uses, so
+ * the two cannot drift apart, and it takes the colour of the CAGED form it
+ * belongs to so a chart of them reads as a route up the neck.
+ */
+const STRINGS = 6;
+const FRETS = 4;
+const W = 74;
+const H = 92;
+const LEFT = 9;
+const TOP = 20;
+const GAP_X = (W - LEFT * 2) / (STRINGS - 1);
+const GAP_Y = (H - TOP - 10) / FRETS;
+
+export default function ChordBox({
+  position,
+  label,
+  name,
+}: {
+  position: Position;
+  /** The degree, e.g. 6-. */
+  label?: string;
+  /** The chord's name in the current key, e.g. Am. */
+  name?: string;
+}) {
+  const { settings } = useSettings();
+  const resolved = useTheme(settings.theme);
+  const palette = paletteFor(resolved);
+  const colour = palette.shapes[position.name];
+
+  const held = useMemo(() => {
+    const frets = position.shape.frets;
+    // Where the window starts. An open shape shows the nut; anything else
+    // starts a fret below the lowest stopped note so the hand has context.
+    const stopped = frets
+      .map((offset, string) => (offset === null ? null : { string, fret: position.fret + offset }))
+      .filter((entry): entry is { string: number; fret: number } => entry !== null && entry.fret > 0);
+    const lowest = stopped.length ? Math.min(...stopped.map((entry) => entry.fret)) : 1;
+    const start = position.fret === 0 ? 0 : Math.max(1, lowest);
+
+    // Which note is the root, so it can be marked.
+    const rootFret = position.fret + position.shape.rootOffset;
+    return {
+      start,
+      dots: frets.map((offset, string) => {
+        if (offset === null) return { string, kind: "muted" as const };
+        const fret = position.fret + offset;
+        if (fret === 0) return { string, kind: "open" as const };
+        const isRoot = string === position.shape.rootString && fret === rootFret;
+        return { string, kind: "held" as const, fret, isRoot };
+      }),
+      barre: position.shape.barre && position.fret > 0 ? position.shape.barre : null,
+    };
+  }, [position]);
+
+  // Strings are drawn low to high, left to right, as you look down at the neck.
+  const x = (string: number) => LEFT + (STRINGS - 1 - string) * GAP_X;
+  const y = (fret: number) => TOP + (fret - held.start + 0.5) * GAP_Y;
+  const visible = (fret: number) => fret >= held.start && fret < held.start + FRETS;
+
+  return (
+    <figure className="flex flex-col items-center gap-1">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-[74px]" role="img" aria-label={`${name ?? ""} ${position.name} shape`}>
+        {/* the nut, thick, only when the shape is played at it */}
+        {held.start === 0 ? (
+          <line x1={LEFT} y1={TOP} x2={W - LEFT} y2={TOP} stroke={palette.nut} strokeWidth={3} strokeLinecap="round" />
+        ) : (
+          <text x={LEFT - 5} y={TOP + GAP_Y * 0.75} textAnchor="end" className="fb-mark" fill={palette.dim} fontSize={9}>
+            {held.start}
+          </text>
+        )}
+        {Array.from({ length: FRETS + 1 }, (_, i) => (
+          <line
+            key={`f${i}`}
+            x1={LEFT}
+            y1={TOP + i * GAP_Y}
+            x2={W - LEFT}
+            y2={TOP + i * GAP_Y}
+            stroke={palette.fret}
+            strokeWidth={held.start === 0 && i === 0 ? 0 : 1}
+          />
+        ))}
+        {Array.from({ length: STRINGS }, (_, s) => (
+          <line key={`s${s}`} x1={x(s)} y1={TOP} x2={x(s)} y2={TOP + FRETS * GAP_Y} stroke={palette.string} strokeWidth={1} />
+        ))}
+
+        {held.barre ? (
+          <line
+            x1={x(held.barre[1])}
+            y1={y(position.fret)}
+            x2={x(held.barre[0])}
+            y2={y(position.fret)}
+            stroke={colour}
+            strokeWidth={GAP_Y * 0.62}
+            strokeLinecap="round"
+          />
+        ) : null}
+
+        {held.dots.map((dot) => {
+          if (dot.kind === "muted") {
+            return (
+              <text key={dot.string} x={x(dot.string)} y={TOP - 5} textAnchor="middle" fontSize={9} fill={palette.dim}>
+                ×
+              </text>
+            );
+          }
+          if (dot.kind === "open") {
+            return (
+              <circle key={dot.string} cx={x(dot.string)} cy={TOP - 8} r={3} fill="none" stroke={palette.dim} strokeWidth={1.2} />
+            );
+          }
+          if (!visible(dot.fret)) return null;
+          return (
+            <circle
+              key={dot.string}
+              cx={x(dot.string)}
+              cy={y(dot.fret)}
+              r={GAP_Y * 0.3}
+              fill={colour}
+              stroke={dot.isRoot ? palette.onAccent : "none"}
+              strokeWidth={dot.isRoot ? 2.2 : 0}
+            />
+          );
+        })}
+      </svg>
+      <figcaption className="flex items-baseline gap-1.5 text-center">
+        {label ? <span className="font-mono text-[13px] font-medium text-bone">{label}</span> : null}
+        {name ? <span className="text-[12px] text-bone-dim">{name}</span> : null}
+      </figcaption>
+    </figure>
+  );
+}
