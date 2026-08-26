@@ -37,7 +37,7 @@ export type Chart = {
 
 type Beat = { chord?: { text?: string } };
 type Measure = { voices?: { beats?: Beat[] }[] };
-type Track = {
+export type Track = {
   measures?: Measure[];
   capo?: number;
   tuning?: number[];
@@ -100,6 +100,10 @@ export async function chartFor(songId: number, tracks = 14): Promise<Chart | nul
   const { revision, token } = await resolve(songId);
   const guitars: Track[] = [];
 
+  // Every guitar part, not just up to the first useful one, because the capo
+  // is written per track and the track carrying the chords is often not the
+  // track that states it. They are small and cached, so the cost is one round
+  // of requests the first time a song is looked at.
   for (let index = 0; index < tracks; index++) {
     let track: Track;
     try {
@@ -109,8 +113,11 @@ export async function chartFor(songId: number, tracks = 14): Promise<Chart | nul
     }
     if (/bass|drum|percussion/i.test(track.instrument ?? "")) continue;
     guitars.push(track);
+  }
+  if (!guitars.length) return null;
 
-    const bars = (track.measures ?? []).map((measure) => {
+  const named = (track: Track) =>
+    (track.measures ?? []).map((measure) => {
       const found: string[] = [];
       for (const voice of measure.voices ?? []) {
         for (const beat of voice.beats ?? []) {
@@ -121,7 +128,9 @@ export async function chartFor(songId: number, tracks = 14): Promise<Chart | nul
       return found;
     });
 
-    if (bars.some((bar) => bar.length)) return asChart(track, bars, false);
+  for (const track of guitars) {
+    const bars = named(track);
+    if (bars.some((bar) => bar.length)) return asChart(track, bars, false, guitars);
   }
 
   // Nobody wrote them down. Read them off the notes instead, from whichever
@@ -132,13 +141,28 @@ export async function chartFor(songId: number, tracks = 14): Promise<Chart | nul
   if (!richest) return null;
 
   const read = settle(chordsFromNotes(richest.measures ?? [], richest.tuning as number[]));
-  return read.some((bar) => bar.length) ? asChart(richest, read, true) : null;
+  return read.some((bar) => bar.length) ? asChart(richest, read, true, guitars) : null;
 }
 
-function asChart(track: Track, bars: string[][], derived: boolean): Chart {
+/**
+ * The capo this was written at.
+ *
+ * A tab states it per track and often only on some of them, so a part can
+ * carry the chords while saying nothing about the capo and a part beside it
+ * says three. Guitar parts in one transcription are at the same capo, so a
+ * sibling that states one is answering for the one that does not. Nothing
+ * stated anywhere means no capo, which is also the common case.
+ */
+export function capoOf(track: Track, siblings: Track[]): number {
+  if (typeof track.capo === "number") return track.capo;
+  const stated = siblings.map((other) => other.capo).find((capo) => typeof capo === "number" && capo > 0);
+  return typeof stated === "number" ? stated : 0;
+}
+
+function asChart(track: Track, bars: string[][], derived: boolean, siblings: Track[]): Chart {
   return {
     bars,
-    capo: typeof track.capo === "number" ? track.capo : 0,
+    capo: capoOf(track, siblings),
     tuning: Array.isArray(track.tuning) ? track.tuning : null,
     instrument: track.instrument ?? "",
     derived,
