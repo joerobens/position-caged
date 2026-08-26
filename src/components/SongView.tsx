@@ -64,7 +64,7 @@ export default function SongView({ slug }: { slug: string }) {
 
   return (
     <main className="mx-auto w-full max-w-[1180px] px-[var(--gutter)] py-7 pb-16">
-      <Link href="/songs" className="text-[13px] text-bone-dim hover:text-bone">
+      <Link href="/songs" className="-my-2 inline-flex min-h-11 items-center text-[13px] text-bone-dim hover:text-bone">
         &larr; Songs
       </Link>
 
@@ -277,6 +277,7 @@ export default function SongView({ slug }: { slug: string }) {
               onChange={(event) => setLyrics(song.slug, event.target.value)}
               rows={14}
               placeholder="Paste the words here."
+              aria-label="Lyrics"
               className="mt-4 w-full rounded-xl border border-line bg-ink p-3 text-[15px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
             />
             <p className="mt-2 text-[13px] leading-relaxed text-bone-dim">

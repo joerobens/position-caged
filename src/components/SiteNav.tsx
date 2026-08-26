@@ -39,13 +39,13 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
         className="mx-auto flex h-12 max-w-[1180px] items-center gap-5 px-[var(--gutter)] sm:h-14"
         aria-label="Site"
       >
-        <Link href="/" className="text-[15px] font-bold tracking-tight text-bone">
+        <Link href="/" className="flex h-full items-center text-[15px] font-bold tracking-tight text-bone">
           Position
         </Link>
-        <div className="flex items-center gap-4 overflow-x-auto">
+        <div className="flex h-full items-center gap-4 overflow-x-auto">
           {LINKS.map((link) => {
             const active = !link.external && pathname.startsWith(link.href);
-            const className = `whitespace-nowrap border-b-2 py-1.5 text-sm transition-colors ${
+            const className = `flex h-full items-center whitespace-nowrap border-b-2 text-sm transition-colors ${
               active ? "border-b-[color:var(--accent)] text-bone" : "border-transparent text-bone-dim hover:text-bone"
             }`;
             return link.external ? (

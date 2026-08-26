@@ -68,6 +68,7 @@ export default function LibraryBackup() {
           ref={input}
           type="file"
           accept="application/json,.json"
+          aria-label="Choose a backup file"
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0];

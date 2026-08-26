@@ -91,6 +91,7 @@ export default function ChartFinder({
         type="button"
         className="chip chip-sm whitespace-nowrap"
         disabled={state === "looking" || track.trim().length < 2}
+        title={track.trim().length < 2 ? "Give the song a title first" : undefined}
         onClick={look}
       >
         {state === "looking" ? "Looking…" : took ? "Fetch again" : "Fetch the chart"}

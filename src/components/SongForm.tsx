@@ -289,6 +289,7 @@ export default function SongForm({
                 value={lyrics ?? ""}
                 onChange={(event) => onLyrics(event.target.value)}
                 placeholder="Paste the words here."
+                aria-label="Lyrics"
                 autoFocus={pasting && !lyrics}
                 rows={10}
                 className="w-full rounded-xl border border-line bg-ink p-3 text-[15px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"

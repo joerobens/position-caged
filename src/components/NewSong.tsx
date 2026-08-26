@@ -15,7 +15,7 @@ export default function NewSong() {
 
   return (
     <main className="mx-auto w-full max-w-[820px] px-[var(--gutter)] py-7 pb-16">
-      <Link href="/songs" className="text-[13px] text-bone-dim hover:text-bone">
+      <Link href="/songs" className="-my-2 inline-flex min-h-11 items-center text-[13px] text-bone-dim hover:text-bone">
         &larr; Songs
       </Link>
       <h1 className="mt-3 text-[22px] font-medium tracking-tight">Add a song</h1>

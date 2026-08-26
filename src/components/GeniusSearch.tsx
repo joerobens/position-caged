@@ -141,8 +141,8 @@ export default function GeniusSearch({
       ) : null}
 
       <p className="text-[13px] leading-relaxed text-bone-dim">
-        This fills in the title and artist and keeps a link to the song. It does not fetch the words: the Genius API
-        does not serve them, so those stay yours to paste in on the song&rsquo;s own page.
+        Picking one fills in the title and artist, keeps a link back, and then goes looking for the words and the
+        chords. Everything it finds is yours to correct.
       </p>
     </div>
   );
