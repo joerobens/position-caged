@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CaretDown, CircleHalf, Moon, SpeakerSimpleSlash, Sun } from "@phosphor-icons/react";
+import {CaretDown, SpeakerSimpleSlash} from "@phosphor-icons/react";
 import { Segmented, Slider, Toggle } from "./controls";
 import { keyLabel, type Tonality } from "@/lib/music";
 import type { ThemePreference } from "@/lib/theme";
@@ -57,7 +57,6 @@ export default function KeyBar({
           </span>
         ) : null}
         <div className="ml-auto flex items-center gap-2">
-          <ThemeButton theme={theme} onChange={(next) => onChange({ theme: next })} />
           <button
             type="button"
             className="btn flex items-center gap-1.5"
@@ -104,31 +103,5 @@ export default function KeyBar({
   );
 }
 
-const THEME_ORDER: ThemePreference[] = ["system", "light", "dark"];
-const THEME_LABEL: Record<ThemePreference, string> = {
-  system: "Theme: following the system",
-  light: "Theme: light",
-  dark: "Theme: dark",
-};
 
 /** Cycles system, light, dark. One button, because it is a preference, not a mode. */
-function ThemeButton({
-  theme,
-  onChange,
-}: {
-  theme: ThemePreference;
-  onChange: (theme: ThemePreference) => void;
-}) {
-  const Icon = theme === "light" ? Sun : theme === "dark" ? Moon : CircleHalf;
-  return (
-    <button
-      type="button"
-      className="btn flex items-center justify-center px-3"
-      aria-label={THEME_LABEL[theme]}
-      title={THEME_LABEL[theme]}
-      onClick={() => onChange(THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length])}
-    >
-      <Icon size={ICON.md} weight="bold" />
-    </button>
-  );
-}

@@ -436,7 +436,7 @@ export default function Page() {
               Dexterity. No key, no shapes, nothing musical.
             </span>
           ) : (
-            <ChipGroup
+            <Segmented
               ariaLabel="System"
               value={settings.system}
               onChange={(system: System) => update({ system })}
