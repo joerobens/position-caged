@@ -60,7 +60,7 @@ export default function KeyBar({
           <ThemeButton theme={theme} onChange={(next) => onChange({ theme: next })} />
           <button
             type="button"
-            className="chip flex items-center gap-1.5"
+            className="btn flex items-center gap-1.5"
             aria-expanded={open}
             onClick={() => setOpen((current) => !current)}
           >
@@ -123,7 +123,7 @@ function ThemeButton({
   return (
     <button
       type="button"
-      className="chip flex items-center justify-center px-3"
+      className="btn flex items-center justify-center px-3"
       aria-label={THEME_LABEL[theme]}
       title={THEME_LABEL[theme]}
       onClick={() => onChange(THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length])}

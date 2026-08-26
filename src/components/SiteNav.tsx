@@ -79,7 +79,7 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
         ) : null}
         <button
           type="button"
-          className={`chip ${syncConfigured ? "" : "ml-auto"} flex flex-none items-center justify-center px-3`}
+          className={`btn ${syncConfigured ? "" : "ml-auto"} flex-none px-3`}
           aria-label={THEME_LABEL[settings.theme]}
           title={THEME_LABEL[settings.theme]}
           onClick={() =>

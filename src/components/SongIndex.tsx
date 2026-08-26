@@ -37,16 +37,21 @@ export default function SongIndex() {
 
   return (
     <>
-      <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-line bg-panel px-3">
-        <MagnifyingGlass size={ICON.md} weight="bold" className="flex-none text-bone-dim" />
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search songs, keys, or numbers"
-          aria-label="Search songs"
-          className="min-h-11 w-full bg-transparent text-sm text-bone outline-none placeholder:text-bone-dim"
-        />
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="flex min-w-[240px] flex-1 items-center gap-2.5 rounded-xl border border-line bg-panel px-3">
+          <MagnifyingGlass size={ICON.md} weight="bold" className="flex-none text-bone-dim" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search songs, keys, or numbers"
+            aria-label="Search songs"
+            className="min-h-11 w-full bg-transparent text-sm text-bone outline-none placeholder:text-bone-dim"
+          />
+        </div>
+        <Link href="/songs/new" className="btn btn-primary flex-none">
+          Add a song
+        </Link>
       </div>
 
       {rows.length === 0 ? (
@@ -97,7 +102,7 @@ export default function SongIndex() {
             {library.hidden.length} seeded chart{library.hidden.length === 1 ? " is" : "s are"} hidden:
           </span>
           {library.hidden.map((slug) => (
-            <button key={slug} type="button" className="chip chip-sm" onClick={() => unhideSeeded(slug)}>
+            <button key={slug} type="button" className="btn" onClick={() => unhideSeeded(slug)}>
               Bring back {slug.replace(/-/g, " ")}
             </button>
           ))}
@@ -105,9 +110,6 @@ export default function SongIndex() {
       ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Link href="/songs/new" className="chip">
-          Add a song
-        </Link>
         <span className="text-[13px] text-bone-dim">
           Charts here are traditional. Anything you add stays in this browser unless you{" "}
           <Link href="/account" className="text-bone underline decoration-line underline-offset-2">

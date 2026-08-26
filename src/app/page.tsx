@@ -44,10 +44,10 @@ export default function Home() {
               both. Built to be read from a music stand at arm&rsquo;s length.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <Link href="/play" className="chip" style={{ background: "var(--accent)", borderColor: "var(--accent)", color: "var(--color-ink)", fontWeight: 500 }}>
+              <Link href="/play" className="btn btn-primary">
                 Open the fretboard
               </Link>
-              <Link href="/songs" className="chip">
+              <Link href="/songs" className="btn">
                 Browse songs
               </Link>
             </div>
@@ -76,7 +76,7 @@ export default function Home() {
           <ul className="mt-3 flex flex-wrap gap-2">
             {SEEDED_SONGS.map((song) => (
               <li key={song.slug}>
-                <Link href={`/songs/${song.slug}`} className="chip">
+                <Link href={`/songs/${song.slug}`} className="btn">
                   {song.title}
                 </Link>
               </li>

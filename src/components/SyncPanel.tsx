@@ -101,13 +101,13 @@ export default function SyncPanel() {
           ) : null}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" className="chip flex items-center gap-2" disabled={sync.busy} onClick={sync.syncNow}>
+            <button type="button" className="btn flex items-center gap-2" disabled={sync.busy} onClick={sync.syncNow}>
               <ArrowsClockwise size={ICON.sm} weight="bold" />
               {sync.busy ? "Syncing" : "Sync now"}
             </button>
             <button
               type="button"
-              className="chip"
+              className="btn"
               onClick={() => {
                 void getSupabase()?.auth.signOut();
                 releaseLibrary();
@@ -132,7 +132,7 @@ export default function SyncPanel() {
             Open it on this device and you will land back here signed in. The link only works once, and only in the
             browser you open it in.
           </p>
-          <button type="button" className="chip mt-3" onClick={() => setSent(null)}>
+          <button type="button" className="btn mt-3" onClick={() => setSent(null)}>
             Use a different address
           </button>
         </>
@@ -156,7 +156,7 @@ export default function SyncPanel() {
               aria-invalid={formError ? true : undefined}
               className="min-h-11 flex-1 rounded-[10px] border border-line bg-ink px-3 text-sm text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
             />
-            <button type="button" className="chip" disabled={sending || !email.trim()} onClick={() => void send()}>
+            <button type="button" className="btn" disabled={sending || !email.trim()} onClick={() => void send()}>
               {sending ? "Sending" : "Send me a link"}
             </button>
           </div>

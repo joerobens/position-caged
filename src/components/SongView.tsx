@@ -301,7 +301,7 @@ export default function SongView({ slug }: { slug: string }) {
                 setEditing(true);
               }}
             >
-              <button type="button" className="chip whitespace-nowrap" onClick={() => setEditing(true)}>
+              <button type="button" className="btn whitespace-nowrap" onClick={() => setEditing(true)}>
                 Paste them in
               </button>
             </LyricsFinder>

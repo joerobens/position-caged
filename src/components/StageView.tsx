@@ -124,7 +124,7 @@ export default function StageView({ slug }: { slug: string }) {
     return (
       <main className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 p-8 text-center">
         <p className="text-[15px] text-bone-dim">Nothing in the library has the slug {slug}.</p>
-        <Link href="/songs" className="chip">
+        <Link href="/songs" className="btn">
           Back to songs
         </Link>
       </main>
@@ -147,7 +147,7 @@ export default function StageView({ slug }: { slug: string }) {
         <Link
           href={set ? `/sets/${set.id}` : `/songs/${slug}`}
           aria-label="Leave the stand"
-          className="chip flex flex-none items-center px-3"
+          className="btn flex flex-none items-center px-3"
         >
           <ArrowLeft size={ICON.sm} weight="bold" />
         </Link>
@@ -193,11 +193,11 @@ export default function StageView({ slug }: { slug: string }) {
           {/* Sizing by hand only means anything when it is not being done for you. */}
           {fit ? null : (
             <>
-              <button type="button" className="chip px-3" aria-label="Smaller text" onClick={() => resize(-3)}>
+              <button type="button" className="btn px-3" aria-label="Smaller text" onClick={() => resize(-3)}>
                 <Minus size={ICON.sm} weight="bold" />
               </button>
               <span className="w-9 text-center font-mono text-[12px] text-bone-dim">{manual}</span>
-              <button type="button" className="chip px-3" aria-label="Bigger text" onClick={() => resize(3)}>
+              <button type="button" className="btn px-3" aria-label="Bigger text" onClick={() => resize(3)}>
                 <Plus size={ICON.sm} weight="bold" />
               </button>
             </>
@@ -270,7 +270,7 @@ export default function StageView({ slug }: { slug: string }) {
             No words for this one yet. Add them on the song page and they will be here, large enough to read from the
             stand.
           </p>
-          <Link href={`/songs/${slug}`} className="chip">
+          <Link href={`/songs/${slug}`} className="btn">
             Add the words
           </Link>
         </div>
@@ -282,7 +282,7 @@ export default function StageView({ slug }: { slug: string }) {
         >
           <button
             type="button"
-            className="chip flex min-h-14 flex-1 items-center justify-center"
+            className="btn flex min-h-14 flex-1 items-center justify-center"
             disabled={page === 0}
             onClick={() => turn(page - 1)}
             aria-label="Previous page"
@@ -294,7 +294,7 @@ export default function StageView({ slug }: { slug: string }) {
           </span>
           <button
             type="button"
-            className="chip flex min-h-14 flex-1 items-center justify-center"
+            className="btn flex min-h-14 flex-1 items-center justify-center"
             disabled={page >= pages - 1}
             onClick={() => turn(page + 1)}
             aria-label="Next page"
@@ -311,7 +311,7 @@ export default function StageView({ slug }: { slug: string }) {
         >
           <button
             type="button"
-            className="chip flex min-h-14 flex-1 items-center justify-center gap-2"
+            className="btn flex min-h-14 flex-1 items-center justify-center gap-2"
             disabled={!previous}
             style={{ opacity: previous ? 1 : 0.3 }}
             onClick={() => go(previous)}
@@ -321,7 +321,7 @@ export default function StageView({ slug }: { slug: string }) {
           </button>
           <button
             type="button"
-            className="chip flex min-h-14 flex-1 items-center justify-center gap-2"
+            className="btn flex min-h-14 flex-1 items-center justify-center gap-2"
             disabled={!next}
             style={{ opacity: next ? 1 : 0.3 }}
             onClick={() => go(next)}

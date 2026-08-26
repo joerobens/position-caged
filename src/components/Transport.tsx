@@ -66,7 +66,7 @@ export default function Transport({ playing, onToggle, bpm, onBpm, beats, beat, 
         onChange={(event) => onBpm(Number(event.target.value))}
       />
 
-      <button type="button" className="chip flex-none" onClick={tap}>
+      <button type="button" className="btn flex-none" onClick={tap}>
         Tap tempo
       </button>
 

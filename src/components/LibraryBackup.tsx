@@ -56,11 +56,11 @@ export default function LibraryBackup() {
         another device. Carry a file across until there is a database behind this.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button type="button" className="chip flex items-center gap-2" onClick={save} disabled={!songs && !words}>
+        <button type="button" className="btn flex items-center gap-2" onClick={save} disabled={!songs && !words}>
           <DownloadSimple size={ICON.sm} weight="bold" />
           Save a copy
         </button>
-        <button type="button" className="chip flex items-center gap-2" onClick={() => input.current?.click()}>
+        <button type="button" className="btn flex items-center gap-2" onClick={() => input.current?.click()}>
           <UploadSimple size={ICON.sm} weight="bold" />
           Bring one in
         </button>

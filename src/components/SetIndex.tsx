@@ -54,13 +54,7 @@ export default function SetIndex() {
             aria-label="Set name"
             className="min-h-11 flex-1 rounded-[10px] border border-line bg-ink px-3 text-sm text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
           />
-          <button
-            type="button"
-            className="chip"
-            disabled={!name.trim()}
-            style={{ opacity: name.trim() ? 1 : 0.4 }}
-            onClick={create}
-          >
+          <button type="button" className="btn btn-primary" disabled={!name.trim()} onClick={create}>
             Make it
           </button>
         </div>
