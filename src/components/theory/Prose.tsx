@@ -1,5 +1,15 @@
 import type { ReactNode } from "react";
 
+/*
+ * Everything you read shares one measure. Prose was capped at seventy
+ * characters and tables were not capped at all, so a page was a narrow column
+ * of text with full width slabs cutting across it, and the eye had to travel
+ * to the far side of the screen to find what a chord does. The neck diagrams
+ * are the exception, and stay wide: twenty two frets need the room, and they
+ * are looked at rather than read.
+ */
+const READING = "max-w-[820px]";
+
 export function H({ children }: { children: ReactNode }) {
   return <h2 className="mt-8 text-[17px] font-medium tracking-tight first:mt-0">{children}</h2>;
 }
@@ -19,7 +29,7 @@ export function N({ children }: { children: ReactNode }) {
 /** A table of notation, which is most of what a reference page is. */
 export function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
   return (
-    <div className="mt-4 overflow-x-auto rounded-xl border border-line">
+    <div className={`mt-4 ${READING} overflow-x-auto rounded-xl border border-line`}>
       <table className="w-full border-collapse text-left text-[13.5px]">
         <thead>
           <tr className="bg-panel">
@@ -52,7 +62,7 @@ export function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
 /** A chart laid out the way it would be on paper, four bars to a line. */
 export function Chart({ lines, caption }: { lines: string[][]; caption?: string }) {
   return (
-    <figure className="my-5">
+    <figure className={`my-5 ${READING}`}>
       <div className="rounded-xl border border-line bg-panel p-3">
         {lines.map((line, index) => (
           <div key={index} className="flex flex-wrap gap-1.5 [&:not(:first-child)]:mt-1.5">
@@ -74,7 +84,7 @@ export function Chart({ lines, caption }: { lines: string[][]; caption?: string 
 
 export function Aside({ children }: { children: ReactNode }) {
   return (
-    <aside className="mt-5 rounded-xl border border-line border-l-[3px] border-l-[color:var(--accent)] bg-panel p-4 text-[13.5px] leading-[1.7] text-bone-dim">
+    <aside className={`mt-5 ${READING} rounded-xl border border-line border-l-[3px] border-l-[color:var(--accent)] bg-panel p-4 text-[13.5px] leading-[1.7] text-bone-dim`}>
       {children}
     </aside>
   );

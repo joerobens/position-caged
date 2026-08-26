@@ -1,4 +1,9 @@
+import TheoryNeck from "@/components/TheoryNeck";
 import { Aside, B, Chart, H, N, P, Table } from "./Prose";
+
+// The same degree, the four, in two different keys.
+const FOUR_IN_C = { root: 5, offset: 5, name: "F", roman: "IV" };
+const FOUR_IN_G = { root: 0, offset: 5, name: "C", roman: "IV" };
 
 export default function NashvilleNumbers() {
   return (
@@ -35,6 +40,23 @@ export default function NashvilleNumbers() {
         A bare number is major. A dash after it makes it minor. Those two rules cover most of every chart you will ever
         see, and a great many songs are nothing but <N>1</N>, <N>4</N> and <N>5</N>.
       </P>
+
+      <P>
+        Here is the same degree twice. Both diagrams show the <N>4</N>, and in both the numbers on the dots read the
+        same, because they are counted from the chord. Only the letters underneath change.
+      </P>
+      <TheoryNeck
+        root={0}
+        chord={FOUR_IN_C}
+        shape="A"
+        caption="The four of C, which is F. The filled dots are its chord tones and the numbers count from F."
+      />
+      <TheoryNeck
+        root={7}
+        chord={FOUR_IN_G}
+        shape="A"
+        caption="The four of G, which is C. A different key, a different chord, the same shape of thing, and a chart written in numbers does not have to be rewritten to say so."
+      />
 
       <H>Everything else</H>
       <P>
@@ -116,6 +138,7 @@ export default function NashvilleNumbers() {
         once a song is stored as relationships you can move it anywhere. Learn a chart as <N>1 4 5</N> and you have
         learned it in twelve keys. Learn it as G, C, D and you have learned it in one.
       </P>
+
     </>
   );
 }

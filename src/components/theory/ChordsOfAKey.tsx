@@ -1,5 +1,10 @@
+import TheoryNeck from "@/components/TheoryNeck";
 import { chordFamily } from "@/lib/family";
 import { Aside, B, H, N, P, Table } from "./Prose";
+
+const ONE = { root: 0, offset: 0, name: "C", roman: "I" };
+const FOUR = { root: 5, offset: 5, name: "F", roman: "IV" };
+const SIX = { root: 9, offset: 9, name: "Am", roman: "vi" };
 
 export default function ChordsOfAKey() {
   const major = chordFamily(0, "major");
@@ -36,6 +41,31 @@ export default function ChordsOfAKey() {
         keys, because the numbers do not move when the key does. That is the same reason the charts in this app are
         written in numbers.
       </P>
+
+      <H>Three of them, in one place</H>
+      <P>
+        The family is not an abstraction: it is chords you can reach. These three are the <N>1</N>, the <N>4</N> and
+        the <N>6-</N> of C, all found without moving your hand far, and between them they play a very large number of
+        songs.
+      </P>
+      <TheoryNeck
+        root={0}
+        chord={ONE}
+        shape="A"
+        caption="The one. Filled dots are the chord tones of C, and the thin rings are the rest of the key around them."
+      />
+      <TheoryNeck
+        root={0}
+        chord={FOUR}
+        shape="A"
+        caption="The four. Same hand position, same key, and the chord tones have moved to F while the key has not."
+      />
+      <TheoryNeck
+        root={0}
+        chord={SIX}
+        shape="A"
+        caption="The six, which is the relative minor. Note how many dots it shares with the one: they differ by a single note, which is why the two sound so close."
+      />
 
       <H>The minor family</H>
       <P>
