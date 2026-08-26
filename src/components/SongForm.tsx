@@ -66,7 +66,7 @@ export default function SongForm({
       credit: credit.trim() || "yours",
       root,
       tonality,
-      numbering: tonality === "minor" ? numbering : undefined,
+      numbering,
       capo: capo ? Number(capo) : undefined,
       tuning: tuning === "standard" ? undefined : tuning,
       feel: feel.trim() || undefined,
@@ -208,6 +208,7 @@ export default function SongForm({
           onFound={(found: FoundChart) => {
             setRoot(found.root);
             setTonality(found.tonality);
+            setNumbering(found.numbering);
             setCapo(found.capo ? String(found.capo) : "");
             if (found.tuning) setTuning(found.tuning);
             setText(found.chart.map((section) => `${section.name}: ${section.bars.join(" ")}`).join("\n"));

@@ -207,6 +207,7 @@ export function toSong(bars: string[][], capo: number): {
   root: number;
   tonality: Tonality;
   capo: number;
+  numbering: "relative-major" | "tonic";
   chart: { name: string; bars: string[] }[];
 } | null {
   const flat = bars.flat();
@@ -229,6 +230,11 @@ export function toSong(bars: string[][], capo: number): {
     root: (shape.root + capo) % 12,
     tonality: shape.tonality,
     capo,
+    // Said outright rather than left to the default. The degrees above were
+    // written against one particular root, and if the tonality is changed
+    // later the default would start counting them from somewhere else and
+    // every chord on the page would quietly move.
+    numbering: relative ? "relative-major" : "tonic",
     chart: fold(tokens),
   };
 }

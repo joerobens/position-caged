@@ -9,6 +9,8 @@ export type FoundChart = {
   root: number;
   tonality: Tonality;
   capo: number;
+  /** How the degrees above were counted, so nothing has to guess later. */
+  numbering: "relative-major" | "tonic";
   chart: { name: string; bars: string[] }[];
   tuning: string | null;
 };

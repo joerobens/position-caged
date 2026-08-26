@@ -4,6 +4,8 @@ import { useState } from "react";
 import ChordBox from "@/components/ChordBox";
 import Panel from "@/components/Panel";
 import { nearestPosition } from "@/lib/progressions";
+import { buildPositions } from "@/lib/music";
+import { shapesWith } from "@/lib/grips";
 import { chordName, type ChordToken } from "@/lib/nashville";
 
 /**
@@ -58,11 +60,29 @@ export default function SongShapes({
           const root = (playRoot + token.offset) % 12;
           // The grip has to match the chord: a minor chord wants a minor form.
           const minor = token.suffix.startsWith("m") && !token.suffix.startsWith("maj");
-          const position = nearestPosition(root, minor ? "minor" : "major", anchor);
+          const tonality = minor ? "minor" : "major";
+
+          // Prefer a shape that can actually draw what the chart asked for.
+          // A seventh drawn as a plain triad is a diagram contradicting the
+          // chart above it, so a form that has the note wins over a nearer one
+          // that does not.
+          const able = shapesWith(token.suffix);
+          const position = able.length
+            ? buildPositions(root, tonality)
+                .filter((entry) => able.includes(entry.name))
+                .sort(
+                  (a, b) =>
+                    Math.min(Math.abs(a.fret - anchor), Math.abs(a.fret + 12 - anchor)) -
+                    Math.min(Math.abs(b.fret - anchor), Math.abs(b.fret + 12 - anchor)),
+                )[0] ?? nearestPosition(root, tonality, anchor)
+            : nearestPosition(root, tonality, anchor);
+
           return (
             <li key={token.raw}>
               <ChordBox
                 position={position}
+                tonality={tonality}
+                quality={token.suffix}
                 label={token.raw}
                 name={`${chordName(token, playRoot)}${position.fret === 0 ? "" : ` · ${position.name} shape`}`}
               />
