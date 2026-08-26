@@ -31,7 +31,7 @@ export default function SongView({ slug }: { slug: string }) {
           Nothing in the library has the slug <b className="font-medium text-bone">{slug}</b>. If you added it in
           another browser it will not be here, because your own songs stay on the device you added them to.
         </p>
-        <Link href="/songs" className="chip mt-4 inline-flex">
+        <Link href="/songs" className="btn mt-4 inline-flex">
           Back to songs
         </Link>
       </main>
@@ -112,6 +112,84 @@ export default function SongView({ slug }: { slug: string }) {
         </div>
       ) : (
       <>
+      {/* Everything you can do to this song, in one place. */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {lyrics ? (
+          <Link href={`/songs/${song.slug}/play`} className="btn btn-primary">
+            Put it on the stand
+          </Link>
+        ) : null}
+        <Link href={practiceHref} className="btn">
+          Practise these changes
+        </Link>
+        {mine ? (
+          <button type="button" className="btn" onClick={() => setEditingChart(true)}>
+            Edit the song
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              const copy = slugify(`${song.title} mine`, library);
+              addSong({ ...song, slug: copy, credit: song.credit });
+              router.push(`/songs/${copy}`);
+            }}
+          >
+            Make a copy I can edit
+          </button>
+        )}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {mine ? (
+            <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
+              Delete
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-quiet"
+              onClick={() => {
+                hideSeeded(song.slug);
+                router.push("/songs");
+              }}
+            >
+              Hide from my library
+            </button>
+          )}
+        </div>
+      </div>
+
+      {confirming ? (
+        <div className="panel mt-3 flex flex-wrap items-center gap-3">
+          <span className="text-[13px] leading-relaxed text-bone-dim">
+            Delete <b className="font-medium text-bone">{song.title}</b>?{" "}
+            {lyrics ? "The words go with it, on every device. " : ""}This cannot be undone.
+          </span>
+          <div className="ml-auto flex gap-2">
+            <button type="button" className="btn" onClick={() => setConfirming(false)}>
+              Keep it
+            </button>
+            <button
+              type="button"
+              className="btn btn-quiet"
+              onClick={() => {
+                removeSong(song.slug);
+                router.push("/songs");
+              }}
+            >
+              Yes, delete it
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {!mine ? (
+        <p className="mt-3 max-w-[70ch] text-[13px] leading-relaxed text-bone-dim">
+          This one ships with the app, so it cannot be edited or deleted. Copy it to make it yours, or hide it to get
+          it out of the list.
+        </p>
+      ) : null}
+
       {/* the chart, which is the reminder you actually need on a stand */}
       <section className="panel mt-5" aria-label="Chart">
         {song.chart.map((section, sectionIndex) => (
@@ -141,24 +219,19 @@ export default function SongView({ slug }: { slug: string }) {
         <span className="text-[13px] text-bone-dim">
           {capo ? `Behind the capo you play` : `In ${KEYS[root]} that is`}
         </span>
-        {chords.map((token) => (
-          <span key={token.raw} className="chip chip-sm font-mono">
-            {token.raw} = {chordName(token, playRoot)}
-          </span>
-        ))}
+        <span className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[13px] text-bone">
+          {chords.map((token) => (
+            <span key={token.raw}>
+              {token.raw} = {chordName(token, playRoot)}
+            </span>
+          ))}
+        </span>
         {capo ? (
           <span className="w-full text-[13px] leading-relaxed text-bone-dim">
             Sounding in <b className="font-medium text-bone">{KEYS[root]} {song.tonality}</b>, which is what anyone
             playing along without a capo needs to know.
           </span>
         ) : null}
-        <Link
-          href={practiceHref}
-          className="chip ml-auto"
-          style={{ background: "var(--accent)", borderColor: "var(--accent)", color: "var(--on-accent)", fontWeight: 500 }}
-        >
-          Practise these changes
-        </Link>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -176,69 +249,6 @@ export default function SongView({ slug }: { slug: string }) {
         ))}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {mine ? (
-          <>
-            <button type="button" className="chip" onClick={() => setEditingChart(true)}>
-              Edit the chart
-            </button>
-            {confirming ? (
-              <>
-                <button
-                  type="button"
-                  className="chip"
-                  style={{ borderColor: "var(--color-bone)", color: "var(--color-bone)" }}
-                  onClick={() => {
-                    removeSong(song.slug);
-                    router.push("/songs");
-                  }}
-                >
-                  Yes, delete it
-                </button>
-                <button type="button" className="chip" onClick={() => setConfirming(false)}>
-                  Keep it
-                </button>
-                <span className="text-[13px] leading-relaxed text-bone-dim">
-                  {lyrics ? "The words go with it, on every device. " : ""}This cannot be undone.
-                </span>
-              </>
-            ) : (
-              <button type="button" className="chip text-bone-dim" onClick={() => setConfirming(true)}>
-                Delete
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="chip"
-              onClick={() => {
-                const copy = slugify(`${song.title} mine`, library);
-                addSong({ ...song, slug: copy, credit: song.credit });
-                router.push(`/songs/${copy}`);
-              }}
-            >
-              Make a copy I can edit
-            </button>
-            <button
-              type="button"
-              className="chip text-bone-dim"
-              onClick={() => {
-                hideSeeded(song.slug);
-                router.push("/songs");
-              }}
-            >
-              Hide from my library
-            </button>
-            <span className="text-[13px] leading-relaxed text-bone-dim">
-              This one ships with the app, so it cannot be edited or deleted. Copy it to make it yours, or hide it to
-              get it out of the list.
-            </span>
-          </>
-        )}
-      </div>
-
       </>
       )}
 
@@ -249,22 +259,9 @@ export default function SongView({ slug }: { slug: string }) {
           <div className="ml-auto flex items-center gap-2">
             {/* Where the words came from, so you can go back and check them. */}
             {song.sourceUrl ? <GeniusLink url={song.sourceUrl} /> : null}
-            {lyrics ? (
-              <>
-                <Link
-                  href={`/songs/${song.slug}/play`}
-                  className="chip chip-sm"
-                  data-on="true"
-                >
-                  Put it on the stand
-                </Link>
-                <button type="button" className="chip chip-sm" onClick={() => setEditing((current) => !current)}>
-                  {editing ? "Done" : "Edit"}
-                </button>
-              </>
-            ) : editing ? (
-              <button type="button" className="chip chip-sm" onClick={() => setEditing(false)}>
-                Done
+            {lyrics || editing ? (
+              <button type="button" className="btn" onClick={() => setEditing((current) => !current)}>
+                {editing ? "Done" : "Edit"}
               </button>
             ) : null}
           </div>

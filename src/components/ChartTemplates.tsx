@@ -28,7 +28,7 @@ export default function ChartTemplates({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="chip chip-sm" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <button type="button" className="btn" aria-expanded={open} onClick={() => setOpen(!open)}>
           {open ? "Close" : "Start from a shape"}
         </button>
         {!open ? (

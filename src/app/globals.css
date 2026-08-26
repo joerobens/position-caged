@@ -98,6 +98,42 @@ body {
   }
 
   /* One control shape for the whole app: 10px pills, 40px minimum touch target. */
+  /*
+   * Two vocabularies, kept apart on purpose.
+   *
+   * A button is an action: it has a filled surface, so it reads as an object
+   * you press and something happens. A chip is a choice: outlined and
+   * transparent, filling with the accent only once it is the one selected.
+   * Before this they were the same pill, so nothing on the page told you
+   * whether touching it would navigate, change a setting, or delete a song.
+   */
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-line px-3.5 text-sm font-medium text-bone transition-colors;
+    @apply hover:border-bone-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone;
+    background: var(--color-board);
+    touch-action: manipulation;
+  }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+  .btn-primary:hover {
+    border-color: var(--accent);
+  }
+  /* Quiet until you mean it. Deleting is not a thing to invite. */
+  .btn-quiet {
+    @apply text-bone-dim hover:text-bone;
+    background: transparent;
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .btn:disabled:hover {
+    border-color: var(--color-line);
+  }
+
   .chip {
     @apply min-h-11 rounded-[10px] border border-line px-3 py-2 text-sm text-bone transition-colors;
     @apply hover:border-bone-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone;

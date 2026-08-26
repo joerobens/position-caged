@@ -277,7 +277,7 @@ export default function SongForm({
             auto={chosenSong}
           >
             {lyrics || pasting ? null : (
-              <button type="button" className="chip whitespace-nowrap" onClick={() => setPasting(true)}>
+              <button type="button" className="btn whitespace-nowrap" onClick={() => setPasting(true)}>
                 Paste them in
               </button>
             )}
@@ -297,7 +297,7 @@ export default function SongForm({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className="chip"
+                  className="btn btn-quiet"
                   onClick={() => {
                     onLyrics("");
                     setPasting(false);
@@ -321,23 +321,11 @@ export default function SongForm({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="chip"
-          disabled={!ready}
-          style={{
-            background: "var(--accent)",
-            borderColor: "var(--accent)",
-            color: "var(--on-accent)",
-            fontWeight: 500,
-            opacity: ready ? 1 : 0.4,
-          }}
-          onClick={save}
-        >
+        <button type="button" className="btn btn-primary" disabled={!ready} onClick={save}>
           {submitLabel}
         </button>
         {onCancel ? (
-          <button type="button" className="chip" onClick={onCancel}>
+          <button type="button" className="btn" onClick={onCancel}>
             Cancel
           </button>
         ) : null}

@@ -65,7 +65,7 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
           <Link
             href="/account"
             aria-label={sync.active ? `Signed in as ${sync.email}` : "Sign in"}
-            className="chip ml-auto flex flex-none items-center gap-2 px-3"
+            className="btn ml-auto flex-none px-3"
           >
             <UserCircle
               size={ICON.md}

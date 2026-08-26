@@ -98,7 +98,7 @@ export default function GeniusSearch({
           </span>
           <button
             type="button"
-            className="chip chip-sm flex-none"
+            className="btn flex-none"
             onClick={() => setPicked(null)}
           >
             Change
@@ -155,7 +155,7 @@ export function GeniusLink({ url }: { url: string }) {
       href={url}
       target="_blank"
       rel="noreferrer noopener"
-      className="chip chip-sm flex items-center gap-1.5"
+      className="btn flex items-center gap-1.5"
       title="Open this song on Genius in a new tab"
     >
       Open on Genius

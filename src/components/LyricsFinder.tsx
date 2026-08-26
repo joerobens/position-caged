@@ -84,7 +84,7 @@ export default function LyricsFinder({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className="chip whitespace-nowrap"
+          className="btn whitespace-nowrap"
           data-on={looking || !ready || chosen ? undefined : "true"}
           onClick={look}
           disabled={looking || !ready}

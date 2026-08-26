@@ -89,7 +89,7 @@ export default function ChartFinder({
     <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
-        className="chip chip-sm whitespace-nowrap"
+        className="btn whitespace-nowrap"
         disabled={state === "looking" || track.trim().length < 2}
         title={track.trim().length < 2 ? "Give the song a title first" : undefined}
         onClick={look}
