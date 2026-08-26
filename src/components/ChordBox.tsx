@@ -65,8 +65,11 @@ export default function ChordBox({
     };
   }, [position]);
 
-  // Strings are drawn low to high, left to right, as you look down at the neck.
-  const x = (string: number) => LEFT + (STRINGS - 1 - string) * GAP_X;
+  // Low E on the left, as a chord diagram is always drawn: you are looking at
+  // the front of the neck with the headstock up, so the thickest string is the
+  // one nearest your thumb side. The shape table counts strings the other way,
+  // low to high, which is why this reads straight across rather than reversed.
+  const x = (string: number) => LEFT + string * GAP_X;
   const y = (fret: number) => TOP + (fret - held.start + 0.5) * GAP_Y;
   const visible = (fret: number) => fret >= held.start && fret < held.start + FRETS;
 
