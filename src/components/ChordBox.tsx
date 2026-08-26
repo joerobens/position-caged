@@ -17,11 +17,17 @@ import type { Position } from "@/lib/music";
  */
 const STRINGS = 6;
 const FRETS = 4;
-const W = 74;
+const W = 88;
 const H = 92;
-const LEFT = 9;
+/*
+ * The left margin carries the fret number, and a shape can sit at the twelfth,
+ * so it has to hold two digits. It had four pixels, which cut everything past
+ * a single digit in half.
+ */
+const PAD_L = 20;
+const PAD_R = 8;
 const TOP = 20;
-const GAP_X = (W - LEFT * 2) / (STRINGS - 1);
+const GAP_X = (W - PAD_L - PAD_R) / (STRINGS - 1);
 const GAP_Y = (H - TOP - 10) / FRETS;
 
 export default function ChordBox({
@@ -69,27 +75,27 @@ export default function ChordBox({
   // the front of the neck with the headstock up, so the thickest string is the
   // one nearest your thumb side. The shape table counts strings the other way,
   // low to high, which is why this reads straight across rather than reversed.
-  const x = (string: number) => LEFT + string * GAP_X;
+  const x = (string: number) => PAD_L + string * GAP_X;
   const y = (fret: number) => TOP + (fret - held.start + 0.5) * GAP_Y;
   const visible = (fret: number) => fret >= held.start && fret < held.start + FRETS;
 
   return (
     <figure className="flex flex-col items-center gap-1">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-[74px]" role="img" aria-label={`${name ?? ""} ${position.name} shape`}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-[88px]" role="img" aria-label={`${name ?? ""} ${position.name} shape`}>
         {/* the nut, thick, only when the shape is played at it */}
         {held.start === 0 ? (
-          <line x1={LEFT} y1={TOP} x2={W - LEFT} y2={TOP} stroke={palette.nut} strokeWidth={3} strokeLinecap="round" />
+          <line x1={PAD_L} y1={TOP} x2={W - PAD_R} y2={TOP} stroke={palette.nut} strokeWidth={3} strokeLinecap="round" />
         ) : (
-          <text x={LEFT - 5} y={TOP + GAP_Y * 0.75} textAnchor="end" className="fb-mark" fill={palette.dim} fontSize={9}>
+          <text x={PAD_L - 6} y={TOP + GAP_Y * 0.8} textAnchor="end" className="fb-mark" fill={palette.dim} fontSize={10}>
             {held.start}
           </text>
         )}
         {Array.from({ length: FRETS + 1 }, (_, i) => (
           <line
             key={`f${i}`}
-            x1={LEFT}
+            x1={PAD_L}
             y1={TOP + i * GAP_Y}
-            x2={W - LEFT}
+            x2={W - PAD_R}
             y2={TOP + i * GAP_Y}
             stroke={palette.fret}
             strokeWidth={held.start === 0 && i === 0 ? 0 : 1}

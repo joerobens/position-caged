@@ -1,6 +1,9 @@
 "use client";
 
+import ChordBox from "@/components/ChordBox";
+import Panel from "@/components/Panel";
 import { chordFamily } from "@/lib/family";
+import { nearestPosition } from "@/lib/progressions";
 import type { Tonality } from "@/lib/music";
 
 /**
@@ -25,20 +28,22 @@ export default function ChordFamily({
   used?: string[];
 }) {
   const family = chordFamily(root, tonality, numbering);
+  const pitchOf = (offset: number) => (root + offset) % 12;
   // A song writing 6-7 is still playing the 6-, so compare on the degree.
   const bare = (token: string) => token.replace(/^([b#]?[1-7])(-|°)?.*$/, "$1$2");
   const plays = new Set(used.map(bare));
 
   return (
-    <section className="panel mt-5" aria-label="The chords of the key">
-      <div className="flex flex-wrap items-baseline gap-x-3">
-        <span className="label">The seven chords of this key</span>
+    <Panel
+      id="family"
+      label="The seven chords of this key"
+      aside={
         <span className="text-[13px] text-bone-dim">
           {plays.size ? `This song uses ${plays.size} of them.` : "Build a triad on each degree and these fall out."}
         </span>
-      </div>
-
-      <ul className="mt-3 grid grid-cols-2 gap-x-4 sm:grid-cols-4 lg:grid-cols-7">
+      }
+    >
+      <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4 lg:grid-cols-7">
         {family.map((chord) => {
           const inSong = plays.has(bare(chord.token));
           return (
@@ -57,11 +62,19 @@ export default function ChordFamily({
                 <span className="font-mono text-[12px] text-bone-dim">{chord.roman}</span>
               </span>
               <span className="text-[14px] text-bone">{chord.name}</span>
-              <span className="text-[12px] leading-snug text-bone-dim">{chord.job}</span>
+              {/* Diminished has no CAGED form, so it is named and not drawn. */}
+              {chord.quality === "dim" ? (
+                <span className="mt-1 text-[12px] leading-snug text-bone-dim">no CAGED shape</span>
+              ) : (
+                <span className="mt-1">
+                  <ChordBox position={nearestPosition(pitchOf(chord.offset), chord.quality === "m" ? "minor" : "major", 0)} />
+                </span>
+              )}
+              <span className="mt-1 text-[12px] leading-snug text-bone-dim">{chord.job}</span>
             </li>
           );
         })}
       </ul>
-    </section>
+    </Panel>
   );
 }

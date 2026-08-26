@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ChordBox from "@/components/ChordBox";
+import Panel from "@/components/Panel";
 import { nearestPosition } from "@/lib/progressions";
 import { chordName, type ChordToken } from "@/lib/nashville";
 
@@ -34,9 +35,10 @@ export default function SongShapes({
   if (!chords.length) return null;
 
   return (
-    <section className="panel mt-5" aria-label="Chord shapes">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="label">Where your hands go</span>
+    <Panel
+      id="shapes"
+      label="Where your hands go"
+      aside={
         <div className="segmented ml-auto w-fit" role="group" aria-label="Region of the neck">
           {REGIONS.map((region) => (
             <button
@@ -49,8 +51,8 @@ export default function SongShapes({
             </button>
           ))}
         </div>
-      </div>
-
+      }
+    >
       <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-4">
         {chords.map((token) => {
           const root = (playRoot + token.offset) % 12;
@@ -73,6 +75,6 @@ export default function SongShapes({
         Each chord takes the CAGED form nearest that fret, so the whole song moves together. The ringed dot is the
         root.
       </p>
-    </section>
+    </Panel>
   );
 }

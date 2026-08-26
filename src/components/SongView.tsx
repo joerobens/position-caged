@@ -9,6 +9,7 @@ import { GeniusLink } from "@/components/GeniusSearch";
 import LyricsFinder from "@/components/LyricsFinder";
 import ChordFamily from "@/components/ChordFamily";
 import SongShapes from "@/components/SongShapes";
+import Panel from "@/components/Panel";
 import SongsOnThis from "@/components/SongsOnThis";
 import { useSession } from "@/hooks/useSession";
 import { addSong, findSong, hideSeeded, removeSong, setLyrics, slugify } from "@/lib/songStore";
@@ -194,7 +195,7 @@ export default function SongView({ slug }: { slug: string }) {
       ) : null}
 
       {/* the chart, which is the reminder you actually need on a stand */}
-      <section className="panel mt-5" aria-label="Chart">
+      <Panel id="chart" label="Chart">
         {song.chart.map((section, sectionIndex) => (
           <div key={sectionIndex} className="border-b border-line py-3 first:pt-0 last:border-b-0 last:pb-0">
             <span className="label">{section.name}</span>
@@ -216,7 +217,7 @@ export default function SongView({ slug }: { slug: string }) {
             </div>
           </div>
         ))}
-      </section>
+      </Panel>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-[13px] text-bone-dim">
@@ -267,9 +268,10 @@ export default function SongView({ slug }: { slug: string }) {
       )}
 
       {/* your words, kept in this browser */}
-      <section className="panel mt-6" aria-label="Lyrics">
-        <div className="flex items-center gap-2">
-          <span className="label">Lyrics</span>
+      <Panel
+        id="lyrics"
+        label="Lyrics"
+        aside={
           <div className="ml-auto flex items-center gap-2">
             {/* Where the words came from, so you can go back and check them. */}
             {song.sourceUrl ? <GeniusLink url={song.sourceUrl} /> : null}
@@ -279,7 +281,8 @@ export default function SongView({ slug }: { slug: string }) {
               </button>
             ) : null}
           </div>
-        </div>
+        }
+      >
 
         {editing ? (
           <>
@@ -321,7 +324,7 @@ export default function SongView({ slug }: { slug: string }) {
             </LyricsFinder>
           </div>
         )}
-      </section>
+      </Panel>
     </main>
   );
 }

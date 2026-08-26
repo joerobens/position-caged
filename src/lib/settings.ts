@@ -58,6 +58,12 @@ export type Settings = {
   showScale: boolean;
   /** Follow the system, or override it. */
   theme: ThemePreference;
+  /**
+   * Which panels on a song page are folded away. Kept because it is a reading
+   * preference rather than a per-song one: if you never want the theory, you
+   * never want it.
+   */
+  songPanels: Record<string, boolean>;
   /** Lyric size on the stand, in pixels. Ignored while lyricFit is on. */
   lyricSize: number;
   /** Columns to read the words in on the stand. */
@@ -110,6 +116,7 @@ export const DEFAULT_SETTINGS: Settings = {
   chordBar: 0,
   showScale: true,
   theme: "system",
+  songPanels: {},
   lyricSize: 26,
   lyricColumns: 2,
   lyricFit: true,
