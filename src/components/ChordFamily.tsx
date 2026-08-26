@@ -31,7 +31,12 @@ export default function ChordFamily({
   const pitchOf = (offset: number) => (root + offset) % 12;
   // A song writing 6-7 is still playing the 6-, so compare on the degree.
   const bare = (token: string) => token.replace(/^([b#]?[1-7])(-|°)?.*$/, "$1$2");
-  const plays = new Set(used.map(bare));
+  const plays = new Set(used.filter((token) => token !== "%").map(bare));
+  const inKey = new Set(family.map((chord) => bare(chord.token)));
+  // A chord the song plays that the key does not contain. Songs borrow all the
+  // time, and which one was borrowed is worth knowing: it is usually the
+  // moment the song stops sounding like the key it is in.
+  const borrowed = [...plays].filter((token) => !inKey.has(token));
 
   return (
     <Panel
@@ -39,7 +44,9 @@ export default function ChordFamily({
       label="The seven chords of this key"
       aside={
         <span className="text-[13px] text-bone-dim">
-          {plays.size ? `This song uses ${plays.size} of them.` : "Build a triad on each degree and these fall out."}
+          {plays.size
+            ? `This song uses ${plays.size - borrowed.length} of them.`
+            : "Build a triad on each degree and these fall out."}
         </span>
       }
     >
@@ -75,6 +82,22 @@ export default function ChordFamily({
           );
         })}
       </ul>
+
+      {borrowed.length ? (
+        <p className="mt-4 max-w-[70ch] text-[13px] leading-relaxed text-bone-dim">
+          It also plays{" "}
+          {borrowed.map((token, index) => (
+            <span key={token}>
+              {index > 0 ? ", " : ""}
+              <b className="font-mono font-medium text-bone">{token}</b>
+            </span>
+          ))}
+          , which {borrowed.length === 1 ? "is" : "are"} not in the key. Borrowed chords are normal and often the most
+          interesting bar in a song, but it is worth being sure: a minor key written with a major first degree is
+          usually a{" "}
+          <b className="font-medium text-bone">-</b> that went missing rather than a decision.
+        </p>
+      ) : null}
     </Panel>
   );
 }
