@@ -127,9 +127,16 @@ export function asDegree(chord: ParsedChord, root: number, tonality: Tonality): 
 export function fold(bars: string[]): { name: string; bars: string[] }[] {
   const sections: { name: string; bars: string[] }[] = [];
   const names = ["Verse", "Chorus", "Bridge", "Part 4", "Part 5", "Part 6"];
+  // A chart is the shape of a song, not a transcript of it. A tab may hold one
+  // chord for thirty bars; four says the same thing and still fits on a stand.
+  const MAX_HOLD = 4;
+  const MAX_BARS = 16;
   let at = 0;
 
-  while (at < bars.length && sections.length < names.length) {
+  /** The same chord bar after bar is one chord held, which is what % means. */
+  const hold = (bar: string, count: number) => [bar, ...Array(Math.max(0, count - 1)).fill("%")];
+
+  while (at < bars.length) {
     let period = 0;
     let repeats = 1;
     for (let size = 1; size <= 8 && at + size * 2 <= bars.length; size++) {
@@ -145,16 +152,44 @@ export function fold(bars: string[]): { name: string; bars: string[] }[] {
         repeats = count;
       }
     }
+
+    // One chord, over and over. That is not a section of its own: it is the
+    // section before it carrying on, which is how anyone would write it down.
+    if (period === 1 && repeats > 1) {
+      const count = Math.min(repeats, MAX_HOLD);
+      const last = sections[sections.length - 1];
+      if (last && last.bars.length < MAX_BARS) {
+        // Carrying on the chord the section ended on is all holds, no restatement.
+        const held = lastReal(last.bars) === bars[at] ? Array(count).fill("%") : hold(bars[at], count);
+        last.bars.push(...held.slice(0, MAX_BARS - last.bars.length));
+      }
+      else if (sections.length < names.length) {
+        // The section before it is full, so this carries on under a new name.
+        sections.push({ name: names[sections.length], bars: hold(bars[at], count) });
+      }
+      at += repeats;
+      continue;
+    }
+
+    if (sections.length >= names.length) break;
+
     if (period === 0) {
       // Nothing repeats from here, so take a sensible run and carry on.
       period = Math.min(8, bars.length - at);
       repeats = 1;
     }
-    const block = bars.slice(at, at + period);
-    const last = sections[sections.length - 1];
-    if (last && last.bars.join(" ") === block.join(" ")) {
+    period = Math.min(period, MAX_BARS);
+
+    // Within the block itself, a chord that holds is written as a hold.
+    const block: string[] = [];
+    for (const bar of bars.slice(at, at + period)) {
+      block.push(block.length > 0 && bar === lastReal(block) ? "%" : bar);
+    }
+
+    const previous = sections[sections.length - 1];
+    if (previous && previous.bars.join(" ") === block.join(" ")) {
       at += period * repeats;
-      continue; // same block again, already written
+      continue; // the same block again, and it is already written down
     }
     sections.push({ name: names[sections.length], bars: block });
     at += period * repeats;
@@ -162,15 +197,12 @@ export function fold(bars: string[]): { name: string; bars: string[] }[] {
   return sections;
 }
 
-/**
- * A fetched chart, as one of our songs.
- *
- * Two things have to line up or the numbers come out wrong. A tab names the
- * shapes you hold, so with a capo on, the key it is written in is not the key
- * it sounds in, and the song stores the sounding one. And a minor chart is
- * counted from its relative major by convention, so the degrees have to be
- * written against that same root the app will read them against.
- */
+/** The last bar that named a chord, looking past any holds. */
+function lastReal(bars: string[]): string | null {
+  for (let i = bars.length - 1; i >= 0; i--) if (bars[i] !== "%") return bars[i];
+  return null;
+}
+
 export function toSong(bars: string[][], capo: number): {
   root: number;
   tonality: Tonality;
