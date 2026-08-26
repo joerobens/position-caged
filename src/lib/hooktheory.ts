@@ -67,7 +67,10 @@ export async function songsOn(path: string): Promise<SongOnProgression[]> {
       artist: String(row.artist),
       song: String(row.song),
       section: String(row.section ?? ""),
-      // Their sample data carries a local hostname, which would be a dead link.
-      url: String(row.url ?? "").replace("http://local.www.hooktheory.com", "https://www.hooktheory.com"),
+      // Real responses come back on plain http, and the docs sample carries a
+      // local hostname. Both would be a bad link from a page served over https.
+      url: String(row.url ?? "")
+        .replace("local.www.hooktheory.com", "www.hooktheory.com")
+        .replace(/^http:\/\//, "https://"),
     }));
 }
