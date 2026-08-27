@@ -3,7 +3,8 @@
 import ChordBox from "@/components/ChordBox";
 import Panel from "@/components/Panel";
 import { chordFamily } from "@/lib/family";
-import { nearestPosition } from "@/lib/progressions";
+import { buildPositions } from "@/lib/music";
+import { pickPosition } from "@/lib/grips";
 import type { Tonality } from "@/lib/music";
 
 /**
@@ -74,7 +75,15 @@ export default function ChordFamily({
                 <span className="mt-1 text-[12px] leading-snug text-bone-dim">no CAGED shape</span>
               ) : (
                 <span className="mt-1">
-                  <ChordBox position={nearestPosition(pitchOf(chord.offset), chord.quality === "m" ? "minor" : "major", 0)} />
+                  <ChordBox
+                    position={
+                      pickPosition(
+                        buildPositions(pitchOf(chord.offset), chord.quality === "m" ? "minor" : "major"),
+                        0,
+                      )!
+                    }
+                    tonality={chord.quality === "m" ? "minor" : "major"}
+                  />
                 </span>
               )}
               <span className="mt-1 text-[12px] leading-snug text-bone-dim">{chord.job}</span>

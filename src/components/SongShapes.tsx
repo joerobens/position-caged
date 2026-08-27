@@ -5,7 +5,7 @@ import ChordBox from "@/components/ChordBox";
 import Panel from "@/components/Panel";
 import { nearestPosition } from "@/lib/progressions";
 import { buildPositions } from "@/lib/music";
-import { shapesWith } from "@/lib/grips";
+import { shapesWith, pickPosition } from "@/lib/grips";
 import { chordName, type ChordToken } from "@/lib/nashville";
 
 /**
@@ -67,15 +67,9 @@ export default function SongShapes({
           // chart above it, so a form that has the note wins over a nearer one
           // that does not.
           const able = shapesWith(token.suffix);
-          const position = able.length
-            ? buildPositions(root, tonality)
-                .filter((entry) => able.includes(entry.name))
-                .sort(
-                  (a, b) =>
-                    Math.min(Math.abs(a.fret - anchor), Math.abs(a.fret + 12 - anchor)) -
-                    Math.min(Math.abs(b.fret - anchor), Math.abs(b.fret + 12 - anchor)),
-                )[0] ?? nearestPosition(root, tonality, anchor)
-            : nearestPosition(root, tonality, anchor);
+          const all = buildPositions(root, tonality);
+          const usable = able.length ? all.filter((entry) => able.includes(entry.name)) : all;
+          const position = pickPosition(usable, anchor) ?? nearestPosition(root, tonality, anchor);
 
           return (
             <li key={token.raw}>

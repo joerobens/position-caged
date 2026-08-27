@@ -87,6 +87,26 @@ export function shapesWith(quality: string): ShapeName[] {
   return (Object.keys(GRIPS) as ShapeName[]).filter((shape) => GRIPS[shape]?.[quality]);
 }
 
+/**
+ * Which form to reach for, out of the five.
+ *
+ * Distance to where your hand already is, mostly. But the C and G forms are
+ * awkward as barre chords, which is why nobody plays them that way: a C form
+ * moved up a fret is a four fret stretch with no barre to hold it. Open they
+ * are the easiest chords on the guitar, so the penalty only applies once they
+ * leave the nut.
+ */
+export function pickPosition<T extends { name: ShapeName; fret: number }>(
+  positions: T[],
+  anchor: number,
+): T | undefined {
+  const awkward = (position: T) =>
+    position.fret > 0 && (position.name === "C" || position.name === "G") ? 4 : 0;
+  const reach = (position: T) =>
+    Math.min(Math.abs(position.fret - anchor), Math.abs(position.fret + 12 - anchor));
+  return [...positions].sort((a, b) => reach(a) + awkward(a) - (reach(b) + awkward(b)))[0];
+}
+
 export function gripFor(
   shape: ShapeName,
   tonality: Tonality,
