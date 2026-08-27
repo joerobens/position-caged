@@ -286,13 +286,26 @@ export default function SongView({ slug }: { slug: string }) {
 
         {editing ? (
           <>
+            {/*
+              * Fetching is part of editing, not just of starting. The words you
+              * have may be the wrong take, or half a verse short, and the only
+              * way to try again used to be to empty the box first.
+              */}
+            <div className="mt-4">
+              <LyricsFinder
+                track={song.title}
+                artist={song.credit.trim().toLowerCase() === "traditional" ? "" : song.credit}
+                onPick={(found) => setLyrics(song.slug, found)}
+                replacing={Boolean(lyrics.trim())}
+              />
+            </div>
             <textarea
               value={lyrics}
               onChange={(event) => setLyrics(song.slug, event.target.value)}
               rows={14}
               placeholder="Paste the words here."
               aria-label="Lyrics"
-              className="mt-4 w-full rounded-xl border border-line bg-ink p-3 text-[15px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
+              className="mt-3 w-full rounded-xl border border-line bg-ink p-3 text-[15px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
             />
             <p className="mt-2 text-[13px] leading-relaxed text-bone-dim">
               {session

@@ -20,6 +20,7 @@ export default function LyricsFinder({
   onPick,
   children,
   auto,
+  replacing = false,
 }: {
   track: string;
   artist: string;
@@ -27,6 +28,8 @@ export default function LyricsFinder({
   children?: ReactNode;
   /** Changes when a song is chosen upstream, which runs the lookup for you. */
   auto?: string;
+  /** True when there are already words, so picking one replaces them. */
+  replacing?: boolean;
 }) {
   const [looking, setLooking] = useState(false);
   const [hits, setHits] = useState<LyricHit[] | null>(null);
@@ -90,7 +93,7 @@ export default function LyricsFinder({
           disabled={looking || !ready}
           title={ready ? undefined : "Give the song a title first"}
         >
-          {looking ? "Looking…" : chosen ? "Look again" : "Find the words"}
+          {looking ? "Looking…" : chosen ? "Look again" : replacing ? "Fetch different words" : "Find the words"}
         </button>
         {children}
       </div>
