@@ -6,6 +6,7 @@ import FollowingTheChanges from "@/components/theory/FollowingTheChanges";
 import NashvilleNumbers from "@/components/theory/NashvilleNumbers";
 import PentatonicsAndBlues from "@/components/theory/PentatonicsAndBlues";
 import ChordsOfAKey from "@/components/theory/ChordsOfAKey";
+import TheChordWheel from "@/components/theory/TheChordWheel";
 import RootsAndOctaves from "@/components/theory/RootsAndOctaves";
 import { THEORY_PAGES, findTheoryPage } from "@/lib/theory";
 
@@ -15,6 +16,7 @@ const CONTENT: Record<string, () => React.ReactElement> = {
   "roots-and-octaves": RootsAndOctaves,
   "following-the-changes": FollowingTheChanges,
   "chords-of-a-key": ChordsOfAKey,
+  "the-chord-wheel": TheChordWheel,
   "pentatonics-and-blues": PentatonicsAndBlues,
 };
 

@@ -18,6 +18,8 @@ import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music"
 import { scaleForTonality, type AdvanceMode, type Mode, type Settings, type System } from "@/lib/settings";
 import { PROGRESSIONS, chordAt, nearestPosition, type Progression } from "@/lib/progressions";
 import { voice } from "@/lib/voicing";
+import ChordWheel from "@/components/ChordWheel";
+import { familyOn, positionOf } from "@/lib/wheel";
 import { LANDMARKS, PENT_SHAPES, relativeMajor, relativeMinor, type PentShape } from "@/lib/pentatonic";
 import { deriveView } from "@/lib/view";
 import { paletteFor } from "@/lib/theme";
@@ -55,6 +57,8 @@ const INFO = {
   direction: "Where the next shape comes from. Up and down walk the neck in order; random stops you anticipating it.",
   pair: "The other half of the slide drill. It shows on the neck as a dashed box, so you can see where you are going before you get there.",
   tap: "Every dot on the neck is playable. Tap one to hear it, which is worth doing with the drone on: that is how a degree stops being a number and starts being a sound.",
+  family:
+    "The six chords of the key, arranged so you can see why they are the six. Every key on the outside is a fifth from the next, every relative minor sits inside its major, and a key's chords are always three touching slices. Tapping one moves the neck to it.",
   backing:
     "The chords of the progression, played as they come round, so there is something under you to play over. It lands on the downbeat of each bar with the click, and sits well below whatever you are playing.",
   click: "The click itself. Turning it off leaves the pips and the shape changes running silently, which is what you want over a backing track.",
@@ -657,6 +661,37 @@ export default function Page() {
                   {view.note}
                 </p>
               ) : null}
+            </div>
+
+            {/*
+              * The family, as a wheel. It sets the key like the chip row does,
+              * but shows why those six chords are the ones: they are three
+              * touching slices, and turning it one notch is the next key.
+              */}
+            <div className="panel flex flex-col gap-3 lg:col-span-2">
+              <Field label="The family" info={INFO.family}>
+                <span className="text-[13px] text-bone-dim">
+                  Tap any chord to move the neck there.
+                </span>
+              </Field>
+              <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+                <ChordWheel
+                  root={settings.root}
+                  tonality={settings.tonality}
+                  onPick={(root, tonality) => update({ root, tonality })}
+                />
+                <ul className="flex flex-wrap gap-x-5 gap-y-1 sm:flex-col sm:gap-y-1">
+                  {familyOn(positionOf(settings.root, settings.tonality)).map((chord) => (
+                    <li key={`${chord.at}:${chord.ring}`} className="flex items-baseline gap-2 text-[14px]">
+                      <span className="w-7 font-mono text-[12px] text-bone-dim">{chord.roman}</span>
+                      <span className="w-8 font-mono text-[12px]" style={{ color: "var(--accent)" }}>
+                        {chord.degree}
+                      </span>
+                      <span className="text-bone">{chord.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </section>
         ) : (

@@ -37,8 +37,14 @@ export const THEORY_PAGES: TheoryPage[] = [
     blurb: "Seven chords fall out of a scale, always in the same order, and most songs live inside them.",
   },
   {
-    slug: "pentatonics-and-blues",
+    slug: "the-chord-wheel",
     n: "06",
+    title: "The chord wheel",
+    blurb: "Why those six chords go together, and why turning it one notch gives you the next key.",
+  },
+  {
+    slug: "pentatonics-and-blues",
+    n: "07",
     title: "Pentatonics and the blues blend",
     blurb: "Up major, down minor, and the two notes a fret apart that make it sound like blues.",
   },
