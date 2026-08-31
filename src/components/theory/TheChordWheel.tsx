@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import ChordWheel from "@/components/ChordWheel";
-import { KEYS, type Tonality } from "@/lib/music";
+import ChordBox from "@/components/ChordBox";
+import { KEYS, buildPositions, type Tonality } from "@/lib/music";
+import { pickPosition } from "@/lib/grips";
 import { familyOn, positionOf } from "@/lib/wheel";
 import { Aside, B, H, N, P } from "./Prose";
 
@@ -51,6 +53,23 @@ export default function TheChordWheel() {
           </ul>
         </div>
       </div>
+
+      <H>The same six, under your hands</H>
+      <P>
+        Turning the wheel changes these too. Three majors and the three minors that live inside them, all near the
+        nut, which is as much of the guitar as a great many songs ever ask for.
+      </P>
+      <ul className="my-5 flex flex-wrap gap-x-5 gap-y-4">
+        {family.map((chord) => {
+          const position = pickPosition(buildPositions(chord.root, chord.ring), 0);
+          if (!position) return null;
+          return (
+            <li key={`grip-${chord.at}-${chord.ring}`}>
+              <ChordBox position={position} tonality={chord.ring} label={chord.roman} name={chord.name} />
+            </li>
+          );
+        })}
+      </ul>
 
       <H>Three slices, not six chords</H>
       <P>
