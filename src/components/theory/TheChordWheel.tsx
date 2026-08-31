@@ -4,13 +4,14 @@ import { useState } from "react";
 import ChordWheel from "@/components/ChordWheel";
 import ChordBox from "@/components/ChordBox";
 import { KEYS, buildPositions, type Tonality } from "@/lib/music";
-import { pickPosition } from "@/lib/grips";
+import { pickPosition, neighbours } from "@/lib/grips";
 import { familyOn, positionOf } from "@/lib/wheel";
 import { Aside, B, H, N, P } from "./Prose";
 
 export default function TheChordWheel() {
   const [root, setRoot] = useState(0);
   const [tonality, setTonality] = useState<Tonality>("major");
+  const [everywhere, setEverywhere] = useState(false);
   const family = familyOn(positionOf(root, tonality));
 
   return (
@@ -59,17 +60,45 @@ export default function TheChordWheel() {
         Turning the wheel changes these too. Three majors and the three minors that live inside them, all near the
         nut, which is as much of the guitar as a great many songs ever ask for.
       </P>
-      <ul className="my-5 flex flex-wrap gap-x-5 gap-y-4">
+      <div className="my-5">
+        <button type="button" className="btn" aria-pressed={everywhere} onClick={() => setEverywhere(!everywhere)}>
+          {everywhere ? "Just the near ones" : "Where else each one is"}
+        </button>
+      </div>
+
+      <ul className="my-5 flex flex-wrap items-start gap-x-5 gap-y-5">
         {family.map((chord) => {
-          const position = pickPosition(buildPositions(chord.root, chord.ring), 0);
-          if (!position) return null;
+          const all = buildPositions(chord.root, chord.ring);
+          const near = pickPosition(all, 0);
+          if (!near) return null;
+          const shown = everywhere ? neighbours(all, near) : [near];
           return (
-            <li key={`grip-${chord.at}-${chord.ring}`}>
-              <ChordBox position={position} tonality={chord.ring} label={chord.roman} name={chord.name} />
+            <li key={`grip-${chord.at}-${chord.ring}`} className="flex flex-col items-center gap-2">
+              {everywhere ? (
+                <span className="flex items-baseline gap-1.5">
+                  <span className="font-mono text-[13px] font-medium text-bone">{chord.roman}</span>
+                  <span className="text-[12px] text-bone-dim">{chord.name}</span>
+                </span>
+              ) : null}
+              {shown.map((position) => (
+                <ChordBox
+                  key={`${position.name}-${position.fret}`}
+                  position={position}
+                  tonality={chord.ring}
+                  label={everywhere ? position.name : chord.roman}
+                  name={everywhere ? (position.fret === 0 ? "open" : `fret ${position.fret}`) : chord.name}
+                />
+              ))}
             </li>
           );
         })}
       </ul>
+
+      <P>
+        Every chord is held by all five CAGED forms, spread up the neck, so each of these has the same chord waiting
+        nearer the nut and further up. Some do not: an open <B>E</B> has nothing above it, because there is nothing
+        above the nut. The loop starts again at the twelfth fret, where the form you began with is waiting.
+      </P>
 
       <H>Three slices, not six chords</H>
       <P>

@@ -107,6 +107,34 @@ export function pickPosition<T extends { name: ShapeName; fret: number }>(
   return [...positions].sort((a, b) => reach(a) + awkward(a) - (reach(b) + awkward(b)))[0];
 }
 
+/**
+ * The same chord, in the places either side of the one you are looking at.
+ *
+ * Five CAGED forms hold every chord, spread up the neck, and the loop repeats
+ * an octave later: the form at the nut is waiting again at the twelfth. So a
+ * chord has a neighbour nearer the nut and one further up, unless it is
+ * already at one end of what a neck can reach.
+ *
+ * Ordered nut first, which is how a chord box reads: down the page is up the
+ * neck.
+ */
+export function neighbours<T extends { name: ShapeName; fret: number }>(
+  positions: T[],
+  chosen: T,
+  reach = 12,
+): T[] {
+  // The same five forms again an octave up, so the loop is visible rather than
+  // stopping dead at the twelfth fret.
+  const spread = positions
+    .flatMap((position) => [position, { ...position, fret: position.fret + 12 }])
+    .filter((position) => position.fret <= reach)
+    .sort((a, b) => a.fret - b.fret);
+
+  const at = spread.findIndex((position) => position.name === chosen.name && position.fret === chosen.fret);
+  if (at < 0) return [chosen];
+  return spread.slice(Math.max(0, at - 1), at + 2);
+}
+
 export function gripFor(
   shape: ShapeName,
   tonality: Tonality,
