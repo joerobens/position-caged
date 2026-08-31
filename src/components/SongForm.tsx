@@ -84,6 +84,7 @@ export default function SongForm({
       {/* Look it up, or just type it in. Either way the chart is yours to write. */}
       <GeniusSearch
         caption={initial ? "Find the song, to fill in title, artist and link" : "Find the song"}
+        linked={sourceUrl ? { title, artist: credit, url: sourceUrl, art } : null}
         onPick={(hit) => {
           setTitle(hit.title);
           setCredit(hit.artist);

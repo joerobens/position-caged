@@ -12,15 +12,24 @@ import { ICON } from "@/lib/icons";
 export default function GeniusSearch({
   onPick,
   caption = "Find the song",
+  linked,
 }: {
   onPick: (hit: { title: string; artist: string; url: string; art: string | null }) => void;
   caption?: string;
+  /**
+   * A song that is already linked, so editing one shows what it is linked to
+   * rather than an empty box pretending it is not.
+   */
+  linked?: { title: string; artist: string; url: string; art?: string } | null;
 }) {
   const [query, setQuery] = useState("");
   // Results are kept with the term that produced them, so a stale list can be
   // ignored on render rather than cleared from inside an effect.
   const [result, setResult] = useState<{ q: string; hits: GeniusHit[] }>({ q: "", hits: [] });
-  const [picked, setPicked] = useState<GeniusHit | null>(null);
+  const [picked, setPicked] = useState<GeniusHit | null>(
+    linked ? { id: -1, title: linked.title, artist: linked.artist, url: linked.url, art: linked.art ?? null, year: null } : null,
+  );
+  const [filling, setFilling] = useState(false);
   const [state, setState] = useState<"idle" | "searching" | "off" | "failed">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const latest = useRef(0);
@@ -96,6 +105,34 @@ export default function GeniusSearch({
             <span className="block truncate text-sm font-medium text-bone">{picked.title}</span>
             <span className="block truncate text-[12.5px] text-bone-dim">{picked.artist}</span>
           </span>
+          {/* Linked before artwork was kept, so it can be fetched now. */}
+          {!picked.art ? (
+            <button
+              type="button"
+              className="btn flex-none"
+              disabled={filling}
+              onClick={async () => {
+                setFilling(true);
+                try {
+                  const query = new URLSearchParams({ q: `${picked.title} ${picked.artist}` });
+                  const response = await fetch(`/api/genius/search?${query}`);
+                  const body = (await response.json()) as { hits?: GeniusHit[] };
+                  // The same song, by its own link, rather than whatever ranks first.
+                  const same = body.hits?.find((hit) => hit.url === picked.url) ?? body.hits?.[0];
+                  if (same) {
+                    setPicked(same);
+                    onPick({ title: same.title, artist: same.artist, url: same.url, art: same.art });
+                  }
+                } catch {
+                  // Nothing to do: the row simply keeps its initials.
+                } finally {
+                  setFilling(false);
+                }
+              }}
+            >
+              {filling ? "Fetching…" : "Get the artwork"}
+            </button>
+          ) : null}
           <button
             type="button"
             className="btn flex-none"
