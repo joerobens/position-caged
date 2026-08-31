@@ -54,6 +54,9 @@ export default function SongIndex() {
           key: `${KEYS[song.root]}${song.tonality === "minor" ? " minor" : " major"}`,
           mine: !isSeeded(song.slug),
           hasLyrics: Boolean(library.lyrics[song.slug]?.trim()),
+          // Read from the song rather than assumed: a chart can be empty, and
+          // one that is will not draw on the stand either.
+          hasChart: song.chart.some((section) => section.bars.length > 0),
         };
       })
       .filter((row) =>
@@ -124,7 +127,7 @@ export default function SongIndex() {
         </p>
       ) : (
         <ul className="mt-4 overflow-hidden rounded-xl border border-line">
-          {rows.map(({ song, numbers, key, mine, hasLyrics }, index) => (
+          {rows.map(({ song, key, mine, hasLyrics, hasChart }, index) => (
             <Fragment key={song.slug}>
               {/* One heading where yours end and the starter charts begin. */}
               {!mine && (index === 0 || rows[index - 1].mine) && rows.some((row) => row.mine) ? (
@@ -164,15 +167,18 @@ export default function SongIndex() {
                     {initials(song.title)}
                   </span>
                 )}
-                <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
-                  <b className="text-[15px] font-medium">{song.title}</b>
-                  <span className="text-[13px] text-bone-dim">{song.credit}</span>
-                  {hasLyrics ? <span className="label">lyrics</span> : null}
+                {/* The title gets its own line rather than sharing one with
+                    the artist and a badge, which read as one run of text. */}
+                <span className="flex min-w-0 flex-1 flex-col gap-px">
+                  <b className="truncate text-[15px] font-medium leading-tight">{song.title}</b>
+                  <span className="truncate text-[12.5px] leading-tight text-bone-dim">{song.credit}</span>
                 </span>
-                <span className="font-mono text-[12px]" style={{ color: "var(--accent)" }}>
-                  {numbers}
+                {/* What you will find when you open it. */}
+                <span className="flex flex-none items-center gap-2">
+                  <span className={hasChart ? "pill pill-on" : "pill pill-off"}>chart</span>
+                  <span className={hasLyrics ? "pill pill-on" : "pill pill-off"}>words</span>
                 </span>
-                <span className="w-[76px] flex-none text-right font-mono text-[12px] text-bone-dim">{key}</span>
+                <span className="w-[70px] flex-none text-right font-mono text-[12px] text-bone-dim">{key}</span>
               </Link>
             </li>
             </Fragment>

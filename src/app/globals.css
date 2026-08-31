@@ -120,6 +120,23 @@ body {
     display: none;
   }
 
+  /*
+   * A signal, not a control. It says whether a song has something, so it is
+   * neither a button nor a chip: nothing happens when you touch it. The unlit
+   * state keeps its place so the column stays readable down the page.
+   */
+  .pill {
+    @apply inline-flex flex-none items-center rounded-full border border-line px-2.5 py-0.5 text-[10.5px] uppercase tracking-[0.07em] leading-5;
+  }
+  .pill-on {
+    @apply text-bone;
+    background: var(--color-board);
+    border-color: var(--color-board);
+  }
+  .pill-off {
+    @apply text-bone-dim opacity-45;
+  }
+
   .btn {
     @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-line px-3.5 text-sm font-medium text-bone transition-colors;
     @apply hover:border-bone-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bone;
