@@ -19,9 +19,20 @@ const SIZE = 320;
 const MID = SIZE / 2;
 const R = { outer: 152, seam: 108, inner: 62 };
 
+/*
+ * Rounded, and deliberately.
+ *
+ * Sine and cosine are not required to be correctly rounded, so the server and
+ * the browser can disagree in the last bit: one writes 44.48849427774749 into
+ * the HTML and the other computes 44.488494277747506, and React calls that a
+ * hydration mismatch. Two decimals is far finer than a 320 unit circle can
+ * show and leaves nothing for them to disagree about.
+ */
+const round = (value: number) => Math.round(value * 100) / 100;
+
 const point = (angle: number, radius: number) => {
   const radians = ((angle - 90) * Math.PI) / 180;
-  return [MID + radius * Math.cos(radians), MID + radius * Math.sin(radians)];
+  return [round(MID + radius * Math.cos(radians)), round(MID + radius * Math.sin(radians))];
 };
 
 /** One segment of a ring, as a path. */
