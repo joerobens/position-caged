@@ -90,8 +90,17 @@ export default function ChordBox({
   // one nearest your thumb side. The shape table counts strings the other way,
   // low to high, which is why this reads straight across rather than reversed.
   const x = (string: number) => PAD_L + string * GAP_X;
-  const y = (fret: number) => TOP + (fret - held.start + 0.5) * GAP_Y;
-  const visible = (fret: number) => fret >= held.start && fret < held.start + FRETS;
+  /*
+   * Which fret the first space belongs to.
+   *
+   * When the shape is played at the nut the top line is the nut itself, so the
+   * space under it is the first fret. Everywhere else the top line is the wire
+   * above the lowest note, and the space under it is that note's own fret.
+   * Treating both the same put every open chord a fret too low.
+   */
+  const firstFret = held.start === 0 ? 1 : held.start;
+  const y = (fret: number) => TOP + (fret - firstFret + 0.5) * GAP_Y;
+  const visible = (fret: number) => fret >= firstFret && fret < firstFret + FRETS;
 
   return (
     <figure className="flex flex-col items-center gap-1">
