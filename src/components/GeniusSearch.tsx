@@ -13,7 +13,7 @@ export default function GeniusSearch({
   onPick,
   caption = "Find the song",
 }: {
-  onPick: (hit: { title: string; artist: string; url: string }) => void;
+  onPick: (hit: { title: string; artist: string; url: string; art: string | null }) => void;
   caption?: string;
 }) {
   const [query, setQuery] = useState("");
@@ -113,7 +113,7 @@ export default function GeniusSearch({
                 className="flex w-full items-center gap-3 bg-ink px-3 py-2.5 text-left transition-colors hover:bg-board"
                 onClick={() => {
                   setPicked(hit);
-                  onPick({ title: hit.title, artist: hit.artist, url: hit.url });
+                  onPick({ title: hit.title, artist: hit.artist, url: hit.url, art: hit.art });
                 }}
               >
                 {hit.art ? (

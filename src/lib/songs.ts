@@ -27,6 +27,8 @@ export type Song = {
   numbering?: "relative-major" | "tonic";
   /** Where you looked it up, so you can go back for the words. */
   sourceUrl?: string;
+  /** Cover art, when the song was found rather than typed. */
+  art?: string;
   /** Why it is worth having in here. */
   note?: string;
 };

@@ -44,6 +44,7 @@ export default function SongForm({
   const [bpm, setBpm] = useState(initial?.bpm ? String(initial.bpm) : "");
   const [text, setText] = useState(initial ? chartToText(initial.chart) : "Verse: 1 1 4 1 | 1 5 1 1");
   const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? "");
+  const [art, setArt] = useState(initial?.art ?? "");
 
   const chart = textToChart(text);
   const counting = numberingOf({ root, tonality, numbering });
@@ -73,6 +74,7 @@ export default function SongForm({
       bpm: bpm ? Number(bpm) : undefined,
       chart,
       sourceUrl: sourceUrl || undefined,
+      art: art || undefined,
       note: initial?.note,
     });
   };
@@ -86,6 +88,7 @@ export default function SongForm({
           setTitle(hit.title);
           setCredit(hit.artist);
           setSourceUrl(hit.url);
+          setArt(hit.art ?? "");
           setChosenSong(`${hit.title}|${hit.artist}`);
         }}
       />

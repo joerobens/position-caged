@@ -9,9 +9,37 @@ import { KEYS } from "@/lib/music";
 import { chartChords, numberingOf } from "@/lib/nashville";
 import { ICON } from "@/lib/icons";
 
+/**
+ * A song with no artwork still gets a square, so the list stays aligned, and
+ * the square says something rather than nothing. Small words are skipped:
+ * "Will the Circle Be Unbroken" is WC, not WT.
+ */
+const SKIP = new Set(["the", "a", "an", "of", "and", "to", "be", "in", "is", "my", "i"]);
+
+function initials(title: string): string {
+  const words = title
+    .split(/[\s-]+/)
+    .map((word) => word.replace(/[^\p{L}\p{N}]/gu, ""))
+    .filter(Boolean);
+  const strong = words.filter((word) => !SKIP.has(word.toLowerCase()));
+  const chosen = strong.length ? strong : words;
+  if (!chosen.length) return "?";
+  if (chosen.length === 1) return chosen[0].slice(0, 2).toUpperCase();
+  return (chosen[0][0] + chosen[1][0]).toUpperCase();
+}
+
+type Sort = "title" | "artist" | "key";
+
+const SORTS: { value: Sort; label: string }[] = [
+  { value: "title", label: "Title" },
+  { value: "artist", label: "Artist" },
+  { value: "key", label: "Key" },
+];
+
 export default function SongIndex() {
   const library = useLibrary();
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<Sort>("title");
   const songs = allSongs(library);
 
   const rows = useMemo(() => {
@@ -32,8 +60,30 @@ export default function SongIndex() {
         !needle
           ? true
           : [row.song.title, row.song.credit, row.numbers, row.key].join(" ").toLowerCase().includes(needle),
-      );
-  }, [songs, query, library]);
+      )
+      /*
+       * Sorted inside the two groups rather than across them. What you added
+       * stays above what shipped with the app, because that was the point of
+       * splitting them, and sorting only decides the order within each.
+       */
+      .sort((a, b) => {
+        if (a.mine !== b.mine) return a.mine ? -1 : 1;
+        const byTitle = a.song.title.localeCompare(b.song.title, undefined, { sensitivity: "base" });
+        if (sort === "artist") {
+          const byArtist = a.song.credit.localeCompare(b.song.credit, undefined, { sensitivity: "base" });
+          return byArtist || byTitle;
+        }
+        if (sort === "key") {
+          // Round the circle rather than the alphabet: C, C#, D and so on, with
+          // a key's major before its minor.
+          const byRoot = a.song.root - b.song.root;
+          if (byRoot) return byRoot;
+          if (a.song.tonality !== b.song.tonality) return a.song.tonality === "major" ? -1 : 1;
+          return byTitle;
+        }
+        return byTitle;
+      });
+  }, [songs, query, library, sort]);
 
   return (
     <>
@@ -48,6 +98,18 @@ export default function SongIndex() {
             aria-label="Search songs"
             className="min-h-11 w-full bg-transparent text-sm text-bone outline-none placeholder:text-bone-dim"
           />
+        </div>
+        <div className="segmented w-fit flex-none" role="group" aria-label="Sort by">
+          {SORTS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={sort === option.value}
+              onClick={() => setSort(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
         <Link href="/songs/new" className="btn btn-primary flex-none">
           Add a song
@@ -80,6 +142,28 @@ export default function SongIndex() {
                 href={`/songs/${song.slug}`}
                 className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-panel px-4 py-3 transition-colors hover:bg-board"
               >
+                {/*
+                  * The artwork, when the song was found rather than typed. An
+                  * empty square holds the place otherwise, because a list where
+                  * only some rows are indented is harder to read than one where
+                  * none are.
+                  */}
+                {song.art ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={song.art}
+                    alt=""
+                    loading="lazy"
+                    className="size-9 flex-none rounded-md border border-line object-cover"
+                  />
+                ) : (
+                  <span
+                    aria-hidden
+                    className="flex size-9 flex-none items-center justify-center rounded-md border border-line font-mono text-[11px] font-medium text-bone-dim"
+                  >
+                    {initials(song.title)}
+                  </span>
+                )}
                 <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
                   <b className="text-[15px] font-medium">{song.title}</b>
                   <span className="text-[13px] text-bone-dim">{song.credit}</span>
