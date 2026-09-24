@@ -267,8 +267,7 @@ export default function StageView({ slug }: { slug: string }) {
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
           <p className="max-w-[46ch] text-[15px] leading-relaxed text-bone-dim">
-            No words for this one yet. Add them on the song page and they will be here, large enough to read from the
-            stand.
+            No words for this song yet.
           </p>
           <Link href={`/songs/${slug}`} className="btn">
             Add the words

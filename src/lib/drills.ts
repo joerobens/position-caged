@@ -28,7 +28,7 @@ export const DRILLS: { id: Drill; system: DrillSystem; name: string; blurb: stri
     id: "boxes",
     system: "scales",
     name: "Box to box",
-    blurb: "The metronome walks you through the pentatonic boxes. The same idea as moving between chord shapes, for the map you actually solo from.",
+    blurb: "The metronome walks you through the pentatonic boxes, one move every few bars.",
   },
   {
     id: "spider",

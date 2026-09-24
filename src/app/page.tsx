@@ -13,7 +13,7 @@ const SECTIONS = [
     href: "/play",
     tag: "The tool",
     title: "Fretboard",
-    body: "Five shapes, roots and octaves, scales, and drills that run to a metronome. Learn mode to read the neck, Practice to play to the clock.",
+    body: "Five shapes, roots and octaves, scales, and drills that run to a metronome. Learn to read the neck, Drill to play it against the clock.",
   },
   {
     href: "/songs",
@@ -41,7 +41,7 @@ export default function Home() {
             </h1>
             <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-bone-dim">
               A fretboard tool, a library of songs written in numbers so they work in any key, and the theory behind
-              both. Built to be read from a music stand at arm&rsquo;s length.
+              both.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link href="/play" className="btn btn-primary">
@@ -55,7 +55,7 @@ export default function Home() {
           <div className="panel">
             <span className="label">Where to start</span>
             <p className="mt-2 text-[13px] leading-relaxed text-bone-dim">
-              If the neck is still a grid to you, open the fretboard, pick <b className="font-medium text-bone">Roots</b>{" "}
+              If the neck is still a grid to you, open the fretboard, choose <b className="font-medium text-bone">Neck</b>{" "}
               and look at nothing else for a week. Everything on this site is built on top of knowing where those are.
             </p>
           </div>

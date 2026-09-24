@@ -201,7 +201,7 @@ export default function SongIndex() {
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="text-[13px] text-bone-dim">
-          Charts here are traditional. Anything you add stays in this browser unless you{" "}
+          Anything you add stays in this browser unless you{" "}
           <Link href="/account" className="text-bone underline decoration-line underline-offset-2">
             sign in
           </Link>

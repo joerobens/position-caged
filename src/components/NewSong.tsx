@@ -19,9 +19,6 @@ export default function NewSong() {
         &larr; Songs
       </Link>
       <h1 className="mt-3 text-[22px] font-medium tracking-tight">Add a song</h1>
-      <p className="mt-2 max-w-[70ch] text-[14px] leading-relaxed text-bone-dim">
-        The chart and the words together. Both stay in this browser, and sync to the database if you are signed in.
-      </p>
       <div className="mt-5">
         <SongForm
           submitLabel="Save the song"

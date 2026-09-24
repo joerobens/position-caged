@@ -22,7 +22,7 @@ export default function SetEditor({ id }: { id: string }) {
       <main className="mx-auto w-full max-w-[1180px] px-[var(--gutter)] py-10">
         <h1 className="text-[20px] font-medium">No set here</h1>
         <p className="mt-2 max-w-[60ch] text-[14px] leading-relaxed text-bone-dim">
-          Sets live in the browser you made them in, so this one will not be here if you made it somewhere else.
+          It may have been deleted, or made on a device that is not signed in to the same account.
         </p>
         <Link href="/sets" className="btn mt-4 inline-flex">
           Back to sets

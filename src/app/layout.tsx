@@ -15,9 +15,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Position - CAGED practice",
+  title: "Position",
   description:
-    "The five CAGED shapes in any key, major or minor, with the scale built around each one, a drone, and a metronome that moves you between positions.",
+    "Learn the neck, practise it to a clock, and keep your songs and sets for the stand.",
   appleWebApp: { capable: true, title: "Position", statusBarStyle: "black-translucent" },
   manifest: "/manifest.webmanifest",
 };

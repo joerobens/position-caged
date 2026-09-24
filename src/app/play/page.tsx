@@ -898,8 +898,7 @@ export default function Page() {
         {view.spiderDrawn ? (
           <>
             <b className="font-medium text-bone">Spider walk, {settings.spiderPattern}</b>, one note per beat. The
-            filled dot is the note due now and the ringed one is next; the numbers are fingers, not frets. Space starts
-            and stops, arrows change tempo. L, D and T switch modes.
+            filled dot is the note due now and the ringed one is next; the numbers are fingers, not frets.
           </>
         ) : chord ? (
           <>
@@ -908,7 +907,7 @@ export default function Page() {
             </b>
             . Filled dot with a ring around it is the third, which is the note to aim at. Dashed dots are the half step
             either side of it, the ones you lean on to get there. Everything is counted from this chord, so when the
-            chord changes the third moves with it. That is the thing the pentatonic box cannot show you.
+            chord changes the third moves with it.
           </>
         ) : view.rootMapDrawn ? (
           <>
@@ -938,7 +937,7 @@ export default function Page() {
             </b>
             . Each dot takes the colour of the shape that frets it, and the bars under the neck show where each shape
             sits. A dot split between two colours belongs to both shapes at once, which is the seam you slide across.
-            Faint dots are chord tones no shape frets. L and P switch modes.
+            Faint dots are chord tones no shape frets.
           </>
         ) : (
           <>
@@ -949,10 +948,13 @@ export default function Page() {
             around the <b className="font-medium text-bone">{position.name} shape</b>
             {position.fret === 0 ? " at the nut" : `, index finger at fret ${position.fret}`}. Filled dot is the root,
             thick ring is a chord tone you are already fretting
-            {view.scaleDrawn ? ", thin ring is the rest of the scale" : ""}. Arrows change position, L and P switch
-            modes.
+            {view.scaleDrawn ? ", thin ring is the rest of the scale" : ""}.
           </>
         )}
+      </p>
+      {/* Only where there is a keyboard to press them. */}
+      <p className="hidden font-mono text-[12px] text-bone-dim pointer-fine:block">
+        ← → shape · ↑ ↓ tempo · space start · L D T mode · O drone
       </p>
       </main>
     </>

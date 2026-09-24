@@ -84,7 +84,7 @@ export function deriveView(settings: Settings): ViewModel {
     // Only the drills that move you somewhere use the bar count.
     advanceBars: drilling && settings.drill !== "spider" ? settings.advanceBars : 0,
     note: allShapes
-      ? "All five covers the whole neck and draws chord tones only. A seven note scale across five positions is around ninety dots, which reads as noise from a music stand."
+      ? "All five shows chord tones only, across the whole neck."
       : (system && NOTES[system]) ?? null,
   };
 }

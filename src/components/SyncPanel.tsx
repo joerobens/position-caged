@@ -48,11 +48,10 @@ export default function SyncPanel() {
     else setSent(email.trim());
   };
 
-  const counts = `${library.own.length} song${library.own.length === 1 ? "" : "s"}, ${
-    Object.keys(library.lyrics).length
-  } set${Object.keys(library.lyrics).length === 1 ? "" : "s"} of words, ${library.sets.length} set${
-    library.sets.length === 1 ? "" : "s"
-  }`;
+  const words = Object.keys(library.lyrics).length;
+  const counts = `${library.own.length} song${library.own.length === 1 ? "" : "s"}, words for ${words}, and ${
+    library.sets.length
+  } set${library.sets.length === 1 ? "" : "s"}`;
 
   return (
     <section className="mt-5 rounded-xl border border-line bg-panel p-4" aria-label="Sync">
@@ -88,9 +87,8 @@ export default function SyncPanel() {
           </p>
 
           <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-bone-dim">
-            Signed in as <b className="font-medium text-bone">{session.user.email}</b>, holding {counts}. Changes go up
-            a moment after you stop editing. The browser copy is what the app reads either way, so none of this needs a
-            connection to play from.
+            Signed in as <b className="font-medium text-bone">{session.user.email}</b>, holding {counts}. Changes sync a
+            moment after you stop editing, and nothing needs a connection to play.
           </p>
 
           {sync.problem ? (

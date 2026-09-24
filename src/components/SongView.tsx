@@ -32,8 +32,8 @@ export default function SongView({ slug }: { slug: string }) {
       <main className="mx-auto w-full max-w-[1180px] px-[var(--gutter)] py-10">
         <h1 className="text-[20px] font-medium">No song here</h1>
         <p className="mt-2 max-w-[60ch] text-[14px] leading-relaxed text-bone-dim">
-          Nothing in the library has the slug <b className="font-medium text-bone">{slug}</b>. If you added it in
-          another browser it will not be here, because your own songs stay on the device you added them to.
+          There is no song at <b className="font-medium text-bone">{slug}</b>. It may have been deleted, or added on a
+          device that is not signed in to the same account.
         </p>
         <Link href="/songs" className="btn mt-4 inline-flex">
           Back to songs
@@ -309,7 +309,7 @@ export default function SongView({ slug }: { slug: string }) {
             />
             <p className="mt-2 text-[13px] leading-relaxed text-bone-dim">
               {session
-                ? "Saved as you type, and synced to your other devices. Never committed to the repo."
+                ? "Saved as you type, and synced to your other devices."
                 : "Saved as you type, in this browser only. Sign in from Account to keep them across devices."}
             </p>
           </>
@@ -321,7 +321,7 @@ export default function SongView({ slug }: { slug: string }) {
           /* Empty state: say what is missing, then offer both ways to fix it. */
           <div className="mt-4 flex flex-col gap-4">
             <p className="max-w-[58ch] text-[14px] leading-relaxed text-bone-dim">
-              No words yet. They are not in the chart, so they have to come from somewhere else.
+              No words yet.
             </p>
             <LyricsFinder
               track={song.title}

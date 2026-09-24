@@ -6,11 +6,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { addSong, setLyrics } from "@/lib/songStore";
 import { ICON } from "@/lib/icons";
 
-/**
- * The library lives in one browser and nowhere else, so it is one cleared cache
- * away from gone. Until there is a database behind this, a file you can carry is
- * the whole backup story.
- */
+/** A file you can carry, whether or not you sign in. */
 export default function LibraryBackup() {
   const library = useLibrary();
   const input = useRef<HTMLInputElement>(null);
@@ -26,7 +22,7 @@ export default function LibraryBackup() {
     link.download = "position-songs.json";
     link.click();
     URL.revokeObjectURL(url);
-    setMessage(`Saved ${songs} song${songs === 1 ? "" : "s"} and ${words} set${words === 1 ? "" : "s"} of words.`);
+    setMessage(`Saved ${songs} song${songs === 1 ? "" : "s"} and words for ${words}.`);
   };
 
   const load = async (file: File) => {
@@ -42,7 +38,7 @@ export default function LibraryBackup() {
         setLyrics(slug, text);
         pasted++;
       }
-      setMessage(`Brought in ${added} song${added === 1 ? "" : "s"} and ${pasted} set${pasted === 1 ? "" : "s"} of words.`);
+      setMessage(`Brought in ${added} song${added === 1 ? "" : "s"} and words for ${pasted}.`);
     } catch {
       setMessage("That file could not be read. It needs to be one this button made.");
     }
@@ -52,8 +48,7 @@ export default function LibraryBackup() {
     <div className="mt-5 rounded-xl border border-line bg-panel p-4">
       <span className="label">Backup</span>
       <p className="mt-1.5 max-w-[70ch] text-[13px] leading-relaxed text-bone-dim">
-        Your songs and words are in this browser only. Clearing site data loses them, and they do not follow you to
-        another device. Carry a file across until there is a database behind this.
+        A file copy of your songs, words and sets, to keep somewhere safe or bring into another browser.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button type="button" className="btn flex items-center gap-2" onClick={save} disabled={!songs && !words}>
