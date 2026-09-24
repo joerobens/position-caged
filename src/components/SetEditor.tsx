@@ -54,8 +54,8 @@ export default function SetEditor({ id }: { id: string }) {
       {/* Everything you can do to this set, in one place. */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {first ? (
-          <Link href={`/songs/${first}/play?set=${set.id}`} className="btn btn-primary">
-            Put the set on the stand
+          <Link href={`/songs/${first}/stand?set=${set.id}`} className="btn btn-primary">
+            Start the set
           </Link>
         ) : null}
         <button type="button" className="btn" onClick={() => setAdding((open) => !open)}>

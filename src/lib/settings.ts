@@ -2,13 +2,10 @@ import { EQUIVALENT_SCALE, SCALES, type Tonality } from "./music";
 import { SPIDER_PATTERNS, type BoxMode, type Drill, type SpiderPattern } from "./drills";
 import type { PentShape } from "./pentatonic";
 import type { ThemePreference } from "./theme";
+import { isTopic, type Clock, type Topic } from "./topics";
 
 /** Where the next shape comes from in the CAGED drill. */
 export type AdvanceMode = "up" | "down" | "random";
-/** What you are doing. Technique is deliberately outside the systems. */
-export type Mode = "learn" | "drill" | "technique";
-/** What you are working on. */
-export type System = "neck" | "chords" | "scales" | "blues";
 export type Zoom = "position" | "neck";
 /** None is the one that tests whether you know the shape or are reading it. */
 export type Labels = "degrees" | "notes" | "none";
@@ -72,10 +69,18 @@ export type Settings = {
   lyricColumns: 1 | 2;
   /** Size the words to fill the screen exactly, so nothing needs scrolling. */
   lyricFit: boolean;
-  /** Reading the neck, playing to the clock, or working the fingers. */
-  mode: Mode;
-  system: System;
+  /** What you are working on in Practice. */
+  topic: Topic;
+  /** Exploring it, or drilling it against the metronome. */
+  clock: Clock;
   drill: Drill;
+  /**
+   * Which of the key's chords the Keys topic is showing, by its place on the
+   * wheel ("7:minor"). Empty means the key's own chord.
+   */
+  keyChord: string;
+  /** The last song you opened, so the home page can take you back to it. */
+  lastSong: string;
   /** Where the pentatonic drill sends you next. */
   boxMode: BoxMode;
   spiderStartFret: number;
@@ -123,9 +128,11 @@ export const DEFAULT_SETTINGS: Settings = {
   lyricSize: 26,
   lyricColumns: 2,
   lyricFit: true,
-  mode: "learn",
-  system: "chords",
+  topic: "shapes",
+  clock: "explore",
   drill: "caged",
+  keyChord: "",
+  lastSong: "",
   boxMode: "up",
   spiderStartFret: 5,
   spiderPattern: "1-2-3-4",
@@ -154,21 +161,9 @@ export function loadSettings(): Settings {
       stored.advanceMode = "up";
       stored.drill = "slide";
     }
-    /*
-     * Play used to be two modes and a pile of booleans deciding what the neck
-     * showed. It is a mode and a system now, so an old setting has to be read
-     * back into the pair it was really expressing.
-     */
-    const legacy = stored as Partial<Settings> & { rootMap?: boolean; landmark?: boolean; changes?: boolean };
-    if (!legacy.system) {
-      legacy.system = legacy.landmark ? "scales" : legacy.rootMap ? "neck" : legacy.changes ? "blues" : "chords";
-    }
-    if ((stored.mode as string) === "practice") {
-      stored.mode = stored.drill === "spider" ? "technique" : "drill";
-      if (stored.mode === "drill" && stored.drill) {
-        legacy.system = stored.drill === "changes" ? "blues" : stored.drill === "boxes" ? "scales" : "chords";
-      }
-    }
+    if (!isTopic(stored.topic)) Object.assign(stored, fromModeAndSystem(stored as Legacy));
+    delete (stored as Legacy).mode;
+    delete (stored as Legacy).system;
     const parsed = { ...DEFAULT_SETTINGS, ...(stored as Partial<Settings>) };
     parsed.scale = scaleForTonality(parsed.scale, parsed.tonality);
     if (!SPIDER_PATTERNS.includes(parsed.spiderPattern)) parsed.spiderPattern = DEFAULT_SETTINGS.spiderPattern;
@@ -176,6 +171,34 @@ export function loadSettings(): Settings {
   } catch {
     return DEFAULT_SETTINGS;
   }
+}
+
+type Legacy = {
+  mode?: string;
+  system?: string;
+  drill?: string;
+  rootMap?: boolean;
+  landmark?: boolean;
+  changes?: boolean;
+};
+
+/**
+ * Practice was a mode (Learn, Drill, Technique) crossed with a system (Neck,
+ * Chords, Scales, Blues), and before that a pile of booleans. Whatever an old
+ * setting or link says, this reads back the topic and clock it meant.
+ */
+export function fromModeAndSystem(legacy: Legacy): { topic: Topic; clock: Clock } {
+  let { mode, system } = legacy;
+  if (!system) system = legacy.landmark ? "scales" : legacy.rootMap ? "neck" : legacy.changes ? "blues" : "chords";
+  if (mode === "practice") {
+    mode = legacy.drill === "spider" ? "technique" : "drill";
+    if (mode === "drill" && legacy.drill) {
+      system = legacy.drill === "changes" ? "blues" : legacy.drill === "boxes" ? "scales" : "chords";
+    }
+  }
+  if (mode === "technique") return { topic: "fingers", clock: "drill" };
+  const topic: Topic = system === "neck" ? "neck" : system === "scales" ? "boxes" : system === "blues" ? "changes" : "shapes";
+  return { topic, clock: mode === "drill" ? "drill" : "explore" };
 }
 
 export function saveSettings(settings: Settings) {

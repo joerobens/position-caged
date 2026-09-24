@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLibrary } from "@/hooks/useLibrary";
@@ -12,6 +12,7 @@ import SongShapes from "@/components/SongShapes";
 import Panel from "@/components/Panel";
 import SongsOnThis from "@/components/SongsOnThis";
 import { useSession } from "@/hooks/useSession";
+import { useSettings } from "@/hooks/useSettings";
 import { addSong, findSong, removeSong, setLyrics } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
@@ -26,6 +27,13 @@ export default function SongView({ slug }: { slug: string }) {
   const [editingChart, setEditingChart] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const { session } = useSession();
+  const { update } = useSettings();
+  const found = Boolean(song);
+
+  // Remembered so the home page can take you straight back here.
+  useEffect(() => {
+    if (found) update({ lastSong: slug });
+  }, [found, slug, update]);
 
   if (!song) {
     return (
@@ -60,7 +68,7 @@ export default function SongView({ slug }: { slug: string }) {
     numbering.steps,
   );
   // The first section, counted from the song's own root, with its minors marked.
-  const practiceHref = `/play?mode=drill&drill=changes&key=${shapeRoot(root, held)}&tonality=${song.tonality}&song=${encodeURIComponent(
+  const practiceHref = `/practice?topic=changes&clock=drill&key=${shapeRoot(root, held)}&tonality=${song.tonality}&song=${encodeURIComponent(
     song.slug,
   )}&bars=${encodeURIComponent(
     barChords(song.chart[0]?.bars ?? [], numbering.steps)
@@ -121,8 +129,8 @@ export default function SongView({ slug }: { slug: string }) {
       {/* Everything you can do to this song, in one place. */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {lyrics ? (
-          <Link href={`/songs/${song.slug}/play`} className="btn btn-primary">
-            Put it on the stand
+          <Link href={`/songs/${song.slug}/stand`} className="btn btn-primary">
+            Open on the stand
           </Link>
         ) : null}
         <Link href={practiceHref} className="btn">

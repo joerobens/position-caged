@@ -654,7 +654,7 @@ function Fretboard({
                 {/* Which landmark this is, so the repeat up the neck is readable. */}
                 {pentatonic.both ? (
                   <text className="fb-mark" x={left + 8} y={TOP_Y + 5 * STRING_GAP + 40} fill={tone}>
-                    shape {box.shape}
+                    box {box.shape}
                   </text>
                 ) : null}
               </g>
@@ -873,7 +873,7 @@ function Fretboard({
         {landmark
           ? landmark.shape === "landmarks"
             ? "Both landmarks, everywhere they fall"
-            : `Shape ${landmark.shape}${pentatonic?.isLandmark ? "  ·  a landmark" : ""}`
+            : `Box ${landmark.shape}${pentatonic?.isLandmark ? "  ·  a landmark" : ""}`
           : spiderWindow
           ? `Spider walk · frets ${spiderWindow.low} to ${spiderWindow.high}`
           : chord

@@ -1,20 +1,20 @@
-import type { Mode, Settings, System, Zoom } from "./settings";
+import type { Settings, Zoom } from "./settings";
+import { clockFor, type Topic } from "./topics";
 
 /**
  * What the current settings actually mean, worked out once.
  *
- * Play is two questions rather than one pile. The mode is what you are doing:
- * exploring, drilling against a clock, or working the fingers. The system is what
- * you are working on. Everything the neck draws follows from that pair, so the
- * rest of the interface never has to reason about it.
+ * Practice is one choice, the topic, with a clock inside it. Everything the neck
+ * draws follows from that, so the rest of the interface never has to reason
+ * about it.
  *
  * The rule it still keeps: a control appears only when changing it would change
  * what you see.
  */
 export type ViewModel = {
-  mode: Mode;
-  /** Null in technique, which genuinely has no system. */
-  system: System | null;
+  topic: Topic;
+  /** The metronome is part of this topic right now. */
+  drilling: boolean;
 
   /** What the neck is drawing. Exactly one of these is true. */
   rootMapDrawn: boolean;
@@ -22,6 +22,8 @@ export type ViewModel = {
   landmarkDrawn: boolean;
   changesDrawn: boolean;
   spiderDrawn: boolean;
+  /** The chords drawn are one of the key's family rather than the key itself. */
+  keysDrawn: boolean;
 
   zoom: Zoom;
   /** All five chord shapes at once, rather than one. */
@@ -36,55 +38,48 @@ export type ViewModel = {
   pairDrawn: boolean;
   /** Bars between moves, once the drill has had its say. */
   advanceBars: number;
-  /** What the mode and system together mean, when it is worth saying. */
+  /** Something the controls cannot say for themselves. */
   note: string | null;
 };
 
-const NOTES: Partial<Record<System, string>> = {
-  neck: "The neck itself: every root in the key and the octave links that join them. This is the layer everything else is built on, and the one worth knowing cold.",
-  scales:
-    "The pentatonic seen as five numbered boxes rather than through the chord shapes. Two of them do the work: shape one with its root under your index finger on the low E, shape four with its root on the A string.",
-  blues:
-    "Following the chords rather than the key. Degrees count from the chord you are on, so the third always reads 3 and you can watch it move when the chord does.",
-};
+/** A drill that moves you does nothing until it has a bar count, so it never starts at zero. */
+export const DEFAULT_ADVANCE = 2;
 
 export function deriveView(settings: Settings): ViewModel {
-  const { mode } = settings;
-  const technique = mode === "technique";
-  const drilling = mode === "drill";
-  // Technique sits outside the systems, so it does not have one.
-  const system = technique ? null : settings.system;
+  const { topic } = settings;
+  const drilling = clockFor(topic, settings.clock) === "drill";
 
-  const rootMapDrawn = system === "neck";
-  const chordsDrawn = system === "chords";
-  const landmarkDrawn = system === "scales";
-  const changesDrawn = system === "blues";
+  const rootMapDrawn = topic === "neck";
+  const keysDrawn = topic === "keys";
+  const chordsDrawn = topic === "shapes" || keysDrawn;
+  const landmarkDrawn = topic === "boxes";
+  const changesDrawn = topic === "changes";
+  const spiderDrawn = topic === "fingers";
 
-  // Whole neck views and the finger exercise both fix the zoom for you.
+  // Whole neck views, the chords of a key and the finger exercise all fix the zoom.
   const zoom: Zoom =
-    technique || changesDrawn ? "position" : rootMapDrawn || landmarkDrawn ? "neck" : settings.zoom;
+    spiderDrawn || changesDrawn || keysDrawn ? "position" : rootMapDrawn || landmarkDrawn ? "neck" : settings.zoom;
 
-  const allShapes = chordsDrawn && settings.allShapes;
-  const scaleAvailable = chordsDrawn && !allShapes;
+  const allShapes = topic === "shapes" && settings.allShapes;
+  const scaleAvailable = topic === "shapes" && !allShapes;
+  const moves = drilling && (settings.drill === "caged" || settings.drill === "slide" || settings.drill === "boxes");
 
   return {
-    mode,
-    system,
+    topic,
+    drilling,
     rootMapDrawn,
     chordsDrawn,
     landmarkDrawn,
     changesDrawn,
-    spiderDrawn: technique,
+    spiderDrawn,
+    keysDrawn,
     zoom,
     allShapes,
     scaleDrawn: scaleAvailable && settings.showScale,
-    zoomAvailable: chordsDrawn && !allShapes,
+    zoomAvailable: topic === "shapes" && !allShapes,
     scaleAvailable,
-    pairDrawn: chordsDrawn && drilling && settings.drill === "slide",
-    // Only the drills that move you somewhere use the bar count.
-    advanceBars: drilling && settings.drill !== "spider" ? settings.advanceBars : 0,
-    note: allShapes
-      ? "All five shows chord tones only, across the whole neck."
-      : (system && NOTES[system]) ?? null,
+    pairDrawn: topic === "shapes" && drilling && settings.drill === "slide",
+    advanceBars: moves ? settings.advanceBars || DEFAULT_ADVANCE : 0,
+    note: allShapes ? "All five shows chord tones only, across the whole neck." : null,
   };
 }

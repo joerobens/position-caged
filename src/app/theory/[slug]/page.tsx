@@ -9,6 +9,13 @@ import ChordsOfAKey from "@/components/theory/ChordsOfAKey";
 import TheChordWheel from "@/components/theory/TheChordWheel";
 import RootsAndOctaves from "@/components/theory/RootsAndOctaves";
 import { THEORY_PAGES, findTheoryPage } from "@/lib/theory";
+import { TOPICS } from "@/lib/topics";
+
+/** The Practice topic each page explains, so reading leads straight to playing. */
+function topicFor(slug: string) {
+  if (slug === "chords-of-a-key") return TOPICS.find((topic) => topic.value === "keys");
+  return TOPICS.find((topic) => topic.theory === slug);
+}
 
 const CONTENT: Record<string, () => React.ReactElement> = {
   "nashville-numbers": NashvilleNumbers,
@@ -39,6 +46,7 @@ export default async function TheoryDetail({ params }: { params: Promise<{ slug:
   const index = THEORY_PAGES.findIndex((entry) => entry.slug === slug);
   const previous = THEORY_PAGES[index - 1];
   const next = THEORY_PAGES[index + 1];
+  const tryIt = topicFor(slug);
 
   return (
     <>
@@ -48,7 +56,14 @@ export default async function TheoryDetail({ params }: { params: Promise<{ slug:
           &larr; Theory
         </Link>
         <p className="label mt-3">{page.n}</p>
-        <h1 className="mt-1 text-[24px] font-medium tracking-tight">{page.title}</h1>
+        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <h1 className="text-[24px] font-medium tracking-tight">{page.title}</h1>
+          {tryIt ? (
+            <Link href={`/practice?topic=${tryIt.value}`} className="btn btn-primary ml-auto">
+              Try it in Practice &rarr;
+            </Link>
+          ) : null}
+        </div>
         <article className="mt-5">
           <Content />
         </article>

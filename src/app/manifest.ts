@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Position",
     short_name: "Position",
     description: "Learn the neck, practise it to a clock, and keep your songs and sets for the stand.",
-    start_url: "/play",
+    start_url: "/",
     display: "standalone",
     orientation: "any",
     background_color: "#12100E",

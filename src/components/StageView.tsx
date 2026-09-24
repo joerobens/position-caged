@@ -85,7 +85,7 @@ export default function StageView({ slug }: { slug: string }) {
 
   const go = useCallback(
     (target: string | null) => {
-      if (target && set) router.push(`/songs/${target}/play?set=${set.id}`);
+      if (target && set) router.push(`/songs/${target}/stand?set=${set.id}`);
     },
     [router, set],
   );

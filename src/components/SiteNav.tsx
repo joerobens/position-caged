@@ -11,7 +11,7 @@ import type { ThemePreference } from "@/lib/theme";
 import { ICON } from "@/lib/icons";
 
 const LINKS = [
-  { href: "/play", label: "Play" },
+  { href: "/practice", label: "Practice" },
   { href: "/songs", label: "Songs" },
   { href: "/sets", label: "Sets" },
   { href: "/theory", label: "Theory" },
