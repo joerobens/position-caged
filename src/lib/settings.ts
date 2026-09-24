@@ -69,6 +69,8 @@ export type Settings = {
   lyricColumns: 1 | 2;
   /** Size the words to fill the screen exactly, so nothing needs scrolling. */
   lyricFit: boolean;
+  /** What the chart on the stand shows: the chords to play, or the numbers. */
+  standChart: "chords" | "numbers";
   /** What you are working on in Practice. */
   topic: Topic;
   /** Exploring it, or drilling it against the metronome. */
@@ -128,6 +130,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lyricSize: 26,
   lyricColumns: 2,
   lyricFit: true,
+  standChart: "chords",
   topic: "shapes",
   clock: "explore",
   drill: "caged",

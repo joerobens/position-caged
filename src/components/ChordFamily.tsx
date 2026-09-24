@@ -42,7 +42,8 @@ export default function ChordFamily({
   return (
     <Panel
       id="family"
-      label="The seven chords of this key"
+      label="The chords of this key"
+      defaultOpen={false}
       aside={
         <span className="text-[13px] text-bone-dim">
           {plays.size

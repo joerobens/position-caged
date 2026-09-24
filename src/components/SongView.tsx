@@ -10,6 +10,10 @@ import LyricsFinder from "@/components/LyricsFinder";
 import ChordFamily from "@/components/ChordFamily";
 import SongShapes from "@/components/SongShapes";
 import Panel from "@/components/Panel";
+import Popover from "@/components/Popover";
+import AddToSet from "@/components/AddToSet";
+import { CaretDown } from "@phosphor-icons/react";
+import { ICON } from "@/lib/icons";
 import SongsOnThis from "@/components/SongsOnThis";
 import { useSession } from "@/hooks/useSession";
 import { useSettings } from "@/hooks/useSettings";
@@ -63,6 +67,7 @@ export default function SongView({ slug }: { slug: string }) {
   const tuning = tuningOf(song.tuning);
   const held = effectiveCapo(capo, song.tuning);
   const playRoot = shapeRoot(spellRoot, held);
+  const hasChart = song.chart.some((section) => section.bars.length > 0);
   const chords = chartChords(
     song.chart.flatMap((section) => section.bars),
     numbering.steps,
@@ -87,25 +92,57 @@ export default function SongView({ slug }: { slug: string }) {
         <span className="text-[15px] text-bone-dim">{song.credit}</span>
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[12px] text-bone-dim">
-        <span>
-          key <b className="font-medium text-bone">{KEYS[root]} {song.tonality}</b>
-          {transpose !== null && transpose !== song.root ? ` (written in ${KEYS[song.root]})` : ""}
-        </span>
+      {/* The key you are reading in, and the way to change it, in one place. */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[14px] text-bone-dim">
+        <Popover
+          label={`Key: ${KEYS[root]} ${song.tonality}. Play it in another key`}
+          button={(open) => (
+            <>
+              <span className="label">Key</span>
+              <b className="text-[16px] font-medium text-bone">
+                {KEYS[root]} {song.tonality}
+              </b>
+              <CaretDown size={ICON.sm} weight="bold" style={{ transform: open ? "rotate(180deg)" : undefined }} />
+            </>
+          )}
+        >
+          {(close) => (
+            <>
+              <span className="label">Play it in</span>
+              <div role="group" aria-label="Play it in" className="grid grid-cols-6 gap-1.5">
+                {KEYS.map((name, index) => (
+                  <button
+                    key={name}
+                    type="button"
+                    className="chip px-0"
+                    aria-pressed={index === root}
+                    onClick={() => {
+                      setTranspose(index === song.root ? null : index);
+                      close();
+                    }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[13px] text-bone-dim">Written in {KEYS[song.root]}. The numbers do not change.</span>
+            </>
+          )}
+        </Popover>
+        {transpose !== null && transpose !== song.root ? (
+          <button type="button" className="btn btn-quiet" onClick={() => setTranspose(null)}>
+            Back to {KEYS[song.root]}
+          </button>
+        ) : null}
+        {capo ? <span>Capo {capo}</span> : null}
         {needsRetune(song.tuning) ? (
           <span>
-            tuned <b className="font-medium text-bone">{tuning.name.toLowerCase()}</b>{" "}
-            <span className="text-bone-dim">{tuning.label}</span>
+            Tuned {tuning.name.toLowerCase()} <span className="font-mono text-[13px]">{tuning.label}</span>
           </span>
         ) : null}
-        {capo ? <span>capo <b className="font-medium text-bone">{capo}</b></span> : null}
-        {held ? (
-          <span>
-            so you play in <b className="font-medium text-bone">{KEYS[shapeRoot(root, held)]}</b>
-          </span>
-        ) : null}
-        {song.feel ? <span>feel <b className="font-medium text-bone">{song.feel}</b></span> : null}
-        {song.bpm ? <span><b className="font-medium text-bone">{song.bpm}</b> bpm</span> : null}
+        {held ? <span>You play {KEYS[shapeRoot(root, held)]} shapes</span> : null}
+        {song.feel ? <span>{song.feel}</span> : null}
+        {song.bpm ? <span>{song.bpm} bpm</span> : null}
       </div>
 
       {song.note ? (
@@ -128,7 +165,8 @@ export default function SongView({ slug }: { slug: string }) {
       <>
       {/* Everything you can do to this song, in one place. */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {lyrics ? (
+        {/* The stand is worth opening with a chart alone: that is what you glance at. */}
+        {lyrics || hasChart ? (
           <Link href={`/songs/${song.slug}/stand`} className="btn btn-primary">
             Open on the stand
           </Link>
@@ -136,6 +174,7 @@ export default function SongView({ slug }: { slug: string }) {
         <Link href={practiceHref} className="btn">
           Practise the changes
         </Link>
+        <AddToSet slug={song.slug} />
         <button type="button" className="btn" onClick={() => setEditingChart(true)}>
           Edit the song
         </button>
@@ -193,52 +232,25 @@ export default function SongView({ slug }: { slug: string }) {
             </div>
           </div>
         ))}
+        {/* What the numbers mean in this key, so nobody has to work it out mid-song. */}
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-t border-line pt-3 text-[13px] text-bone-dim">
+          <span>{capo ? "Behind the capo you play" : `In ${KEYS[root]} that is`}</span>
+          <span className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[14px] text-bone">
+            {chords.map((token) => (
+              <span key={token.raw}>
+                {token.raw} = {chordName(token, playRoot)}
+              </span>
+            ))}
+          </span>
+          {capo ? (
+            <span className="w-full">
+              It sounds in <b className="font-medium text-bone">{KEYS[root]} {song.tonality}</b>.
+            </span>
+          ) : null}
+        </div>
       </Panel>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-[13px] text-bone-dim">
-          {capo ? `Behind the capo you play` : `In ${KEYS[root]} that is`}
-        </span>
-        <span className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[13px] text-bone">
-          {chords.map((token) => (
-            <span key={token.raw}>
-              {token.raw} = {chordName(token, playRoot)}
-            </span>
-          ))}
-        </span>
-        {capo ? (
-          <span className="w-full text-[13px] leading-relaxed text-bone-dim">
-            Sounding in <b className="font-medium text-bone">{KEYS[root]} {song.tonality}</b>, which is what anyone
-            playing along without a capo needs to know.
-          </span>
-        ) : null}
-      </div>
-
       <SongShapes chords={chords} playRoot={playRoot} />
-
-      <ChordFamily
-        root={root}
-        tonality={song.tonality}
-        numbering={numbering}
-        used={song.chart.flatMap((section) => section.bars)}
-      />
-
-      <SongsOnThis bars={song.chart[0]?.bars ?? []} />
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span className="label">Play it in</span>
-        {KEYS.map((name, index) => (
-          <button
-            key={name}
-            type="button"
-            className="chip chip-sm"
-            aria-pressed={index === root}
-            onClick={() => setTranspose(index)}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
 
       </>
       )}
@@ -314,6 +326,19 @@ export default function SongView({ slug }: { slug: string }) {
           </div>
         )}
       </Panel>
+
+      {/* For learning the song rather than playing it, so they come last and start folded. */}
+      {!editingChart ? (
+        <>
+          <ChordFamily
+            root={root}
+            tonality={song.tonality}
+            numbering={numbering}
+            used={song.chart.flatMap((section) => section.bars)}
+          />
+          <SongsOnThis bars={song.chart[0]?.bars ?? []} />
+        </>
+      ) : null}
     </main>
   );
 }
