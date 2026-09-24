@@ -18,7 +18,7 @@ import {
 import type { Labels, Zoom } from "@/lib/settings";
 import type { SpiderStep } from "@/lib/drills";
 import type { Palette } from "@/lib/theme";
-import { APPROACH_ABOVE, APPROACH_BELOW, TARGET_THIRD, type Chord } from "@/lib/progressions";
+import { thirdOf, type Chord } from "@/lib/progressions";
 import {
   LANDMARKS,
   boxOccurrences,
@@ -353,9 +353,11 @@ function Fretboard({
         // the target in one bar is a passing note in the next.
         const fromChord = chord ? degreeAt(string, fret, chord.root) : degree;
         const isChordTone = primary && chordTones.has(`${string}:${fret}`);
-        const isTarget = !!chord && primary && fromChord === TARGET_THIRD;
+        const third = chord ? thirdOf(chord) : 0;
+        const isTarget = !!chord && primary && fromChord === third;
+        // The half step either side of the third, the notes you lean on to get there.
         const isApproach =
-          !!chord && primary && !isChordTone && (fromChord === APPROACH_BELOW || fromChord === APPROACH_ABOVE);
+          !!chord && primary && !isChordTone && (fromChord === third - 1 || fromChord === third + 1);
         const inScale = showScale && intervals.includes(degree);
         if (!inScale && !isChordTone && !isTarget && !isApproach) continue;
         out.push({
@@ -889,7 +891,7 @@ function Fretboard({
       ) : null}
       {chord ? (
         <text className="voice-txt" x={view.box[0] + view.box[2] - 16} y={TOP_Y - 20} textAnchor="end" fill={colour} opacity={0.85}>
-          aim at {NAMES[(chord.root + TARGET_THIRD) % 12]} (3rd)
+          aim at {NAMES[(chord.root + thirdOf(chord)) % 12]} (3rd)
         </text>
       ) : null}
       {landmark ? (

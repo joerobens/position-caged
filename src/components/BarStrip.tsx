@@ -1,6 +1,7 @@
 "use client";
 
 import { chordAt, type Progression } from "@/lib/progressions";
+import type { Tonality } from "@/lib/music";
 
 /**
  * The form drawn as a chart, the way it is written on paper: four bars to a line
@@ -10,11 +11,13 @@ import { chordAt, type Progression } from "@/lib/progressions";
 export default function BarStrip({
   progression,
   keyRoot,
+  tonality = "major",
   bar,
   onSelect,
 }: {
   progression: Progression;
   keyRoot: number;
+  tonality?: Tonality;
   bar: number;
   onSelect?: (bar: number) => void;
 }) {
@@ -27,7 +30,7 @@ export default function BarStrip({
       aria-label="Bars of the form"
     >
       {progression.bars.map((_, index) => {
-        const chord = chordAt(progression, keyRoot, index);
+        const chord = chordAt(progression, keyRoot, index, tonality);
         const active = index === current;
         return (
           <button

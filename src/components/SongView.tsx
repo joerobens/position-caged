@@ -15,7 +15,7 @@ import { useSession } from "@/hooks/useSession";
 import { addSong, findSong, hideSeeded, removeSong, setLyrics, slugify } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
-import { barOffsets, chartChords, chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
+import { barChords, chartChords, chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 
 export default function SongView({ slug }: { slug: string }) {
   const library = useLibrary();
@@ -60,9 +60,12 @@ export default function SongView({ slug }: { slug: string }) {
     song.chart.flatMap((section) => section.bars),
     numbering.steps,
   );
-  const practiceHref = `/play?mode=practice&drill=changes&key=${shapeRoot(root, held)}&tonality=${song.tonality}&bars=${encodeURIComponent(
-    barOffsets(song.chart[0].bars, numbering.steps)
-      .map((offset) => (offset + (numbering.relative ? 3 : 0)) % 12)
+  // The first section, counted from the song's own root, with its minors marked.
+  const practiceHref = `/play?mode=drill&drill=changes&key=${shapeRoot(root, held)}&tonality=${song.tonality}&song=${encodeURIComponent(
+    song.slug,
+  )}&bars=${encodeURIComponent(
+    barChords(song.chart[0]?.bars ?? [], numbering.steps)
+      .map((bar) => `${(bar.offset + (numbering.relative ? 3 : 0)) % 12}${bar.minor ? "m" : ""}`)
       .join(","),
   )}`;
 
@@ -124,7 +127,7 @@ export default function SongView({ slug }: { slug: string }) {
           </Link>
         ) : null}
         <Link href={practiceHref} className="btn">
-          Open on the fretboard
+          Practise the changes
         </Link>
         {mine ? (
           <button type="button" className="btn" onClick={() => setEditingChart(true)}>

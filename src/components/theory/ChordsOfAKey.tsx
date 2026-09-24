@@ -4,7 +4,7 @@ import { Aside, B, H, N, P, Table } from "./Prose";
 
 const ONE = { root: 0, offset: 0, name: "C", roman: "I" };
 const FOUR = { root: 5, offset: 5, name: "F", roman: "IV" };
-const SIX = { root: 9, offset: 9, name: "Am", roman: "vi" };
+const SIX = { root: 9, offset: 9, name: "Am", roman: "vi", minor: true };
 
 export default function ChordsOfAKey() {
   const major = chordFamily(0, "major");

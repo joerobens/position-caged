@@ -119,14 +119,15 @@ export function chartChords(bars: string[], tonality: Tonality): ChordToken[] {
 }
 
 /** The chart as semitone offsets, one per bar, for handing to the practice tool. */
-export function barOffsets(bars: string[], tonality: Tonality): number[] {
-  let last = 0;
+export function barChords(bars: string[], tonality: Tonality): { offset: number; minor: boolean }[] {
+  let last = { offset: 0, minor: false };
   return bars.map((bar) => {
     const first = bar.split(/\s+/)[0];
     const token = parseChord(first, tonality);
     if (!token || token.hold) return last;
-    last = token.offset;
-    return token.offset;
+    // Minor and diminished both flatten the third, which is what the fretboard aims at.
+    last = { offset: token.offset, minor: /^(m(?!aj)|dim)/.test(token.suffix) };
+    return last;
   });
 }
 

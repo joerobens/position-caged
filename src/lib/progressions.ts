@@ -13,6 +13,11 @@ export type Progression = {
   bars: number[];
   /** Bars per line when the form is drawn as a chart. */
   perLine: number;
+  /**
+   * Which bars are minor chords, when the form says. A song's chart does; the
+   * blues forms do not, and their chords take the quality of the key instead.
+   */
+  minor?: boolean[];
 };
 
 export const PROGRESSIONS: Progression[] = [
@@ -39,7 +44,8 @@ export const PROGRESSIONS: Progression[] = [
   },
 ];
 
-export const ROMAN: Record<number, string> = { 0: "I", 5: "IV", 7: "V" };
+/** Every semitone above the key root, as a numeral. A song can land on any of them. */
+const ROMAN = ["I", "bII", "II", "bIII", "III", "IV", "bV", "V", "bVI", "VI", "bVII", "VII"];
 
 export type Chord = {
   /** Pitch class of this chord's own root. */
@@ -48,12 +54,36 @@ export type Chord = {
   offset: number;
   name: string;
   roman: string;
+  /** A minor chord's third is a semitone lower, so the note to aim at moves with it. */
+  minor?: boolean;
 };
 
-export function chordAt(progression: Progression, keyRoot: number, bar: number): Chord {
-  const offset = progression.bars[((bar % progression.bars.length) + progression.bars.length) % progression.bars.length];
+export function chordAt(progression: Progression, keyRoot: number, bar: number, tonality: Tonality = "major"): Chord {
+  const index = ((bar % progression.bars.length) + progression.bars.length) % progression.bars.length;
+  const offset = progression.bars[index];
   const root = (keyRoot + offset) % 12;
-  return { root, offset, name: KEYS[root], roman: ROMAN[offset] ?? "?" };
+  const minor = progression.minor ? progression.minor[index] : tonality === "minor";
+  const numeral = ROMAN[offset] ?? "?";
+  return {
+    root,
+    offset,
+    name: `${KEYS[root]}${minor ? "m" : ""}`,
+    roman: minor ? numeral.toLowerCase() : numeral,
+    minor,
+  };
+}
+
+/**
+ * A form as it travels in a link: one bar per entry, semitones above the key
+ * root, with an m on the minor ones ("9m,5,0,7"). Anything unreadable is null.
+ */
+export function readBars(text: string): { bars: number[]; minor: boolean[] } | null {
+  const entries = text.split(",").map((entry) => /^(\d{1,2})(m?)$/.exec(entry.trim()));
+  if (!entries.length || entries.some((entry) => !entry || Number(entry[1]) > 11)) return null;
+  return {
+    bars: entries.map((entry) => Number(entry![1])),
+    minor: entries.map((entry) => entry![2] === "m"),
+  };
 }
 
 /**
@@ -71,7 +101,7 @@ export function nearestPosition(chordRoot: number, tonality: Tonality, anchorFre
   });
 }
 
-/** The note you are aiming at, and the two semitone neighbours you lean on to get there. */
-export const TARGET_THIRD = 4;
-export const APPROACH_BELOW = 3;
-export const APPROACH_ABOVE = 5;
+/** The note you are aiming at: the chord's own third, major or minor. */
+export function thirdOf(chord: Chord): number {
+  return chord.minor ? 3 : 4;
+}

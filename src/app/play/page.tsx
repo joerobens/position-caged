@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo } from "react";
+import Link from "next/link";
 import Fretboard from "@/components/Fretboard";
 import KeyBar from "@/components/KeyBar";
 import SiteNav from "@/components/SiteNav";
@@ -16,7 +17,9 @@ import { getAudioEngine } from "@/lib/audio";
 import { BOX_MODES, SPIDER_PATTERNS, drillsFor, spiderSequence, spiderStepAt, type BoxMode, type Drill } from "@/lib/drills";
 import { FRET_COUNT, KEYS, SCALES, buildPositions, keyLabel } from "@/lib/music";
 import { scaleForTonality, type AdvanceMode, type Mode, type Settings, type System } from "@/lib/settings";
-import { PROGRESSIONS, chordAt, nearestPosition, type Progression } from "@/lib/progressions";
+import { PROGRESSIONS, chordAt, nearestPosition, readBars, type Progression } from "@/lib/progressions";
+import { useLibrary } from "@/hooks/useLibrary";
+import { findSong } from "@/lib/songStore";
 import { voice } from "@/lib/voicing";
 import ChordWheel from "@/components/ChordWheel";
 import { familyOn, positionOf } from "@/lib/wheel";
@@ -129,24 +132,26 @@ export default function Page() {
   const pairPosition = positions[Math.min(settings.pairIndex, positions.length - 1)];
   const intervals = SCALES[settings.tonality][settings.scale] ?? Object.values(SCALES[settings.tonality])[0];
   const view = deriveView(settings);
+  const library = useLibrary();
+  const fromSong = settings.customSong ? findSong(library, settings.customSong) : undefined;
   const progression: Progression = useMemo(() => {
-    if (settings.progression === "custom" && settings.customBars) {
-      const bars = settings.customBars
-        .split(",")
-        .map(Number)
-        .filter((value) => Number.isFinite(value));
-      if (bars.length) {
-        return {
-          id: "custom",
-          name: "From a song",
-          blurb: "The chart handed over from a song page. Change the key on the song and this follows it.",
-          bars,
-          perLine: bars.length % 4 === 0 ? 4 : Math.min(bars.length, 3),
-        };
-      }
+    const handed = settings.progression === "custom" ? readBars(settings.customBars) : null;
+    if (handed) {
+      return {
+        id: "custom",
+        name: fromSong?.title ?? "From a song",
+        blurb: "The first section of the song's chart, in the key the song is in.",
+        ...handed,
+        perLine: handed.bars.length % 4 === 0 ? 4 : Math.min(handed.bars.length, 3),
+      };
     }
     return PROGRESSIONS.find((entry) => entry.id === settings.progression) ?? PROGRESSIONS[0];
-  }, [settings.progression, settings.customBars]);
+  }, [settings.progression, settings.customBars, fromSong]);
+  // A song handed over sits with the blues forms as one more thing to walk.
+  const progressionOptions = [
+    ...(readBars(settings.customBars) ? [{ value: "custom", label: fromSong?.title ?? "From a song" }] : []),
+    ...PROGRESSIONS.map((entry) => ({ value: entry.id, label: entry.name })),
+  ];
   const resolvedTheme = useTheme(settings.theme);
   const audioReady = useAudioReady();
   const palette = paletteFor(resolvedTheme);
@@ -174,9 +179,10 @@ export default function Page() {
     if (drill === "caged" || drill === "slide" || drill === "boxes" || drill === "changes") patch.drill = drill;
     if (drill === "spider") patch.mode = "technique";
     const bars = params.get("bars");
-    if (bars && /^[\d,]+$/.test(bars)) {
+    if (bars && readBars(bars)) {
       patch.progression = "custom";
       patch.customBars = bars;
+      patch.customSong = params.get("song") ?? "";
       patch.chordBar = 0;
       patch.system = "blues";
       if (!patch.mode) patch.mode = "drill";
@@ -212,11 +218,12 @@ export default function Page() {
   const chordFor = useCallback(
     (bar: number) => {
       if (!view.changesDrawn || !settings.soundChanges) return null;
-      const sounding = chordAt(progression, settings.root, bar);
-      // The blues is all dominant sevenths, and without them it is not the blues.
-      return voice(sounding.root, false, true);
+      const sounding = chordAt(progression, settings.root, bar, settings.tonality);
+      // A song's chords are played as written. The blues forms are all dominant
+      // sevenths, and without them it is not the blues.
+      return progression.minor ? voice(sounding.root, !!sounding.minor) : voice(sounding.root, false, true);
     },
-    [view.changesDrawn, settings.soundChanges, settings.root, progression],
+    [view.changesDrawn, settings.soundChanges, settings.root, settings.tonality, progression],
   );
 
   const metronome = useMetronome({
@@ -244,24 +251,27 @@ export default function Page() {
 
   // The clock owns the form while it is running. Off the clock you step it yourself.
   const activeBar = metronome.playing && settings.mode === "drill" ? metronome.bar : settings.chordBar;
-  const chord = view.changesDrawn ? chordAt(progression, settings.root, activeBar) : null;
+  const chord = view.changesDrawn ? chordAt(progression, settings.root, activeBar, settings.tonality) : null;
   // Following changes, the neck shows the chord's own shape nearest where you are.
-  const position = chord ? nearestPosition(chord.root, settings.tonality, anchor.fret) : anchor;
+  const position = chord ? nearestPosition(chord.root, chord.minor ? "minor" : "major", anchor.fret) : anchor;
 
   // The accent follows the shape, so the whole interface tells you where you are.
   const accent = palette.shapes[position.name];
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--accent", accent);
+    // The light theme's shape colours are dark, so what sits on them turns white.
+    root.style.setProperty("--on-accent", palette.onAccent);
     root.style.setProperty("--fb-dim", palette.dim);
     // Put it back on the way out. Without this the shape colour followed you
     // to every other page for the rest of the session, so the stand and the
     // song pages quietly turned whatever colour Play was last showing.
     return () => {
       root.style.removeProperty("--accent");
+      root.style.removeProperty("--on-accent");
       root.style.removeProperty("--fb-dim");
     };
-  }, [accent, palette.dim]);
+  }, [accent, palette.dim, palette.onAccent]);
 
 
   // Drone. Retunes rather than restarting, so changing key mid-practice does not click.
@@ -631,12 +641,13 @@ export default function Page() {
                       ariaLabel="Progression"
                       value={settings.progression}
                       onChange={(value) => update({ progression: value, chordBar: 0 })}
-                      options={PROGRESSIONS.map((entry) => ({ value: entry.id, label: entry.name }))}
+                      options={progressionOptions}
                     />
                   </Field>
                   <BarStrip
                     progression={progression}
                     keyRoot={settings.root}
+                    tonality={settings.tonality}
                     bar={settings.chordBar}
                     onSelect={(value) => update({ chordBar: value })}
                   />
@@ -758,15 +769,21 @@ export default function Page() {
                         ariaLabel="Progression"
                         value={settings.progression}
                         onChange={(value) => update({ progression: value, chordBar: 0 })}
-                        options={PROGRESSIONS.map((entry) => ({ value: entry.id, label: entry.name }))}
+                        options={progressionOptions}
                       />
                     </Field>
                     <BarStrip
                       progression={progression}
                       keyRoot={settings.root}
+                      tonality={settings.tonality}
                       bar={activeBar}
                       onSelect={metronome.playing ? undefined : (value) => update({ chordBar: value })}
                     />
+                    {settings.progression === "custom" && fromSong ? (
+                      <Link href={`/songs/${fromSong.slug}`} className="btn self-start">
+                        &larr; Back to {fromSong.title}
+                      </Link>
+                    ) : null}
                     <p className="text-[13px] leading-relaxed text-bone-dim">
                       {metronome.playing
                         ? `Bar ${(activeBar % progression.bars.length) + 1} of ${progression.bars.length}. Stay where you are and let the chords come to you.`
