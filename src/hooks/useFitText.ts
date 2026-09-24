@@ -3,45 +3,44 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /**
- * Sizes text to fill its box exactly, so a song can be read without scrolling.
+ * Sizes text so all of it fits its box at once, as large as it can be.
  *
- * On a stand, scrolling costs you a hand. The whole point is that the song is
- * simply there, and the only way to guarantee that is to let the type find its
- * own size rather than asking you to hunt for one with a pair of buttons.
+ * On the stand the words are a cue, not something to read line by line, so the
+ * whole song has to be there at a glance: no scrolling, no pages to turn. The
+ * type finds its own size, and the column count is chosen with it, because a
+ * long song in landscape reads larger in three columns than squeezed into two.
  *
- * Binary search over the size range, measuring the real element rather than a
- * copy, because the answer depends on how the text actually wraps and, with two
- * columns, on how it balances. That is about six passes, in a layout effect, so
- * it settles before the browser paints and never flickers.
- *
- * A long song cannot be made to fit by shrinking it: past about forty lines the
- * type is too small to read from a metre away, which is the only distance that
- * matters here. So `min` is a readability floor rather than a last resort, and
- * anything that will not fit at that size becomes pages you turn instead, which
- * is what the paper on a music stand was always doing.
+ * For each column count on offer it binary-searches the size, measuring the
+ * real element rather than a copy, since the answer depends on how the text
+ * actually wraps and balances. The largest size wins; on a tie, fewer columns.
+ * About six passes a count, in a layout effect, so it settles before the
+ * browser paints and never flickers.
  */
 export function useFitText<T extends HTMLElement>({
   enabled,
   min,
   max,
+  columns,
   deps,
 }: {
   enabled: boolean;
   min: number;
   max: number;
+  /** The column counts it may choose from, fewest first. */
+  columns: number[];
   deps: unknown[];
 }) {
   const ref = useRef<T>(null);
-  const [size, setSize] = useState(max);
-  const [pages, setPages] = useState(1);
+  const [fit, setFit] = useState({ size: max, columns: columns[0] ?? 1 });
   /** The box we last measured against, so our own changes cannot restart us. */
   const measured = useRef({ width: 0, height: 0 });
+  const options = columns.join(",");
 
   const measure = useCallback(() => {
     const el = ref.current;
     if (!el || !enabled) return;
 
-    const previous = el.style.fontSize;
+    const previous = { size: el.style.fontSize, columns: el.style.columnCount };
     // Overflow shows up as height when the text simply runs on, and as width
     // when the columns fragment sideways. Either one means it does not fit.
     const fits = (px: number) => {
@@ -49,32 +48,31 @@ export function useFitText<T extends HTMLElement>({
       return el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1;
     };
 
-    let low = min;
-    let high = max;
-    let best = min;
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
-      if (fits(mid)) {
-        best = mid;
-        low = mid + 1;
-      } else {
-        high = mid - 1;
+    let winner = { size: min, columns: Number(options.split(",")[0]) || 1 };
+    for (const count of options.split(",").map(Number)) {
+      el.style.columnCount = String(count);
+      let low = min;
+      let high = max;
+      let best = 0;
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        if (fits(mid)) {
+          best = mid;
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+      if (best > winner.size || (best === winner.size && best > 0 && count < winner.columns)) {
+        winner = { size: best, columns: count };
       }
     }
 
-    // At the floor the columns fragment sideways, and each screenful of them is
-    // a page. The browser has already done the splitting; we only count it.
-    el.style.fontSize = `${best}px`;
-    const width = el.clientWidth;
-    // A trailing column gap inflates scrollWidth by a fraction of a page, so a
-    // little tolerance stops it inventing an extra, nearly empty one.
-    const counted = width > 0 ? Math.max(1, Math.ceil(el.scrollWidth / width - 0.15)) : 1;
-
-    el.style.fontSize = previous;
+    el.style.fontSize = previous.size;
+    el.style.columnCount = previous.columns;
     measured.current = { width: el.clientWidth, height: el.clientHeight };
-    setSize(best);
-    setPages(counted);
-  }, [enabled, min, max]);
+    setFit(winner);
+  }, [enabled, min, max, options]);
 
   useLayoutEffect(() => {
     measure();
@@ -118,5 +116,5 @@ export function useFitText<T extends HTMLElement>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, measure, ...deps]);
 
-  return { ref, size, pages };
+  return { ref, size: fit.size, columns: fit.columns };
 }

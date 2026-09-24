@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Plus, X } from "@phosphor-icons/react";
+import { ArrowDown, ArrowUp, Play, Plus, X } from "@phosphor-icons/react";
 import { useLibrary } from "@/hooks/useLibrary";
 import { allSongs, findSet, keyInSet, moveInSet, removeSet, saveSet } from "@/lib/songStore";
 import Popover from "@/components/Popover";
@@ -120,6 +120,14 @@ export default function SetEditor({ id }: { id: string }) {
           {inSet.map((song, index) => (
             <li key={song!.slug} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-panel px-3 py-2.5 last:border-b-0">
               <span className="w-6 flex-none text-center font-mono text-[13px] text-bone-dim">{index + 1}</span>
+              {/* Picking the set up partway, after a break or a false start. */}
+              <Link
+                href={`/songs/${song!.slug}/stand?set=${set.id}`}
+                aria-label={`Start the set from ${song!.title}`}
+                className="btn btn-quiet size-11 flex-none px-0"
+              >
+                <Play size={ICON.sm} weight="fill" />
+              </Link>
               <Link href={`/songs/${song!.slug}`} className="min-w-0 flex-1 truncate text-[15px] font-medium hover:text-bone-dim">
                 {song!.title}
               </Link>

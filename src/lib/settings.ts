@@ -63,14 +63,10 @@ export type Settings = {
    * never want it.
    */
   songPanels: Record<string, boolean>;
-  /** Lyric size on the stand, in pixels. Ignored while lyricFit is on. */
-  lyricSize: number;
-  /** Columns to read the words in on the stand. */
-  lyricColumns: 1 | 2;
-  /** Size the words to fill the screen exactly, so nothing needs scrolling. */
-  lyricFit: boolean;
   /** What the chart on the stand shows: the chords to play, or the numbers. */
   standChart: "chords" | "numbers";
+  /** Whether the chart is open on the stand. Closed, the words have the screen. */
+  standChanges: boolean;
   /** What you are working on in Practice. */
   topic: Topic;
   /** Exploring it, or drilling it against the metronome. */
@@ -127,10 +123,8 @@ export const DEFAULT_SETTINGS: Settings = {
   showScale: true,
   theme: "system",
   songPanels: {},
-  lyricSize: 26,
-  lyricColumns: 2,
-  lyricFit: true,
   standChart: "chords",
+  standChanges: false,
   topic: "shapes",
   clock: "explore",
   drill: "caged",
