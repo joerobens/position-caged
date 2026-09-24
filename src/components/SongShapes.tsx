@@ -40,6 +40,7 @@ export default function SongShapes({
     <Panel
       id="shapes"
       label="Where your hands go"
+      defaultOpen={false}
       aside={
         <div className="segmented ml-auto w-fit" role="group" aria-label="Region of the neck">
           {REGIONS.map((region) => (

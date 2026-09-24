@@ -3,7 +3,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import GeniusSearch from "@/components/GeniusSearch";
 import { TUNINGS, effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
-import LyricsFinder from "@/components/LyricsFinder";
 import ChartTemplates from "@/components/ChartTemplates";
 import ChartFinder, { type FoundChart } from "@/components/ChartFinder";
 import { nextSectionName } from "@/lib/chartTemplates";
@@ -12,7 +11,7 @@ import { chartToText, textToChart } from "@/lib/chartText";
 import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 import type { Song } from "@/lib/songs";
 
-/** Create and edit are the same form, so a chart cannot be writable once and never again. */
+/** Every detail of a song at once, for the rare change bigger than a line. */
 const EXAMPLE_CHART = "Verse: 1 1 4 1 | 1 5 1 1";
 
 export default function SongForm({
@@ -20,16 +19,11 @@ export default function SongForm({
   submitLabel,
   onSave,
   onCancel,
-  lyrics,
-  onLyrics,
 }: {
   initial?: Song;
   submitLabel: string;
   onSave: (song: Omit<Song, "slug">) => void;
   onCancel?: () => void;
-  /** Passed when the words are part of the same job, which is adding a song. */
-  lyrics?: string;
-  onLyrics?: (words: string) => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [credit, setCredit] = useState(initial?.credit ?? "");
@@ -38,13 +32,12 @@ export default function SongForm({
   const [numbering, setNumbering] = useState<"relative-major" | "tonic">(initial?.numbering ?? "relative-major");
   const [capo, setCapo] = useState(initial?.capo ? String(initial.capo) : "");
   const [tuning, setTuning] = useState(initial?.tuning ?? "standard");
-  const [pasting, setPasting] = useState(false);
   // Set when a song is chosen from the search, so the words follow that choice.
   const [chosenSong, setChosenSong] = useState("");
   const chartId = useId();
   const [feel, setFeel] = useState(initial?.feel ?? "");
   const [bpm, setBpm] = useState(initial?.bpm ? String(initial.bpm) : "");
-  const [text, setText] = useState(initial ? chartToText(initial.chart) : EXAMPLE_CHART);
+  const [text, setText] = useState(initial ? chartToText(initial.chart) : "");
   const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? "");
   // A found chart waiting for a yes, because there is already one here.
   const [proposal, setProposal] = useState<FoundChart | null>(null);
@@ -53,7 +46,7 @@ export default function SongForm({
     textNow.current = text;
   }, [text]);
   // Only an empty box, or a new song's untouched example, is safe to fill without asking.
-  const untouched = (current: string) => !current.trim() || (!initial && current === EXAMPLE_CHART);
+  const untouched = (current: string) => !current.trim();
   const takeChart = (found: FoundChart) => {
     setRoot(found.root);
     setTonality(found.tonality);
@@ -76,7 +69,8 @@ export default function SongForm({
     .join(" and ");
   const tokens = chart.flatMap((section) => section.bars);
   const unknown = tokens.filter((bar) => parseChord(bar, counting.steps) === null);
-  const ready = Boolean(title.trim()) && chart.length > 0 && unknown.length === 0;
+  // A chart is optional: a song can be words alone until you work it out.
+  const ready = Boolean(title.trim()) && unknown.length === 0;
 
   const save = () => {
     if (!ready) return;
@@ -101,7 +95,7 @@ export default function SongForm({
     <div className="flex flex-col gap-3">
       {/* Look it up, or just type it in. Either way the chart is yours to write. */}
       <GeniusSearch
-        caption={initial ? "Find the song, to fill in title, artist and link" : "Find the song"}
+        caption="Linked song"
         linked={sourceUrl ? { title, artist: credit, url: sourceUrl, art } : null}
         onArtwork={setArt}
         onPick={(hit) => {
@@ -134,7 +128,7 @@ export default function SongForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="label">Key</span>
+        <span className="label">Sounds in</span>
         <div className="chip-row">
           {KEYS.map((name, index) => (
             <button key={name} type="button" className="chip" aria-pressed={index === root} onClick={() => setRoot(index)}>
@@ -201,7 +195,7 @@ export default function SongForm({
           </select>
         </label>
         <label className="flex w-24 flex-col gap-2">
-          <span className="label">Bpm</span>
+          <span className="label">BPM</span>
           <input
             value={bpm}
             inputMode="numeric"
@@ -281,6 +275,7 @@ export default function SongForm({
           value={text}
           onChange={(event) => setText(event.target.value)}
           rows={Math.max(3, text.split("\n").length + 1)}
+          placeholder={EXAMPLE_CHART}
           className="rounded-xl border border-line bg-ink p-3 font-mono text-sm leading-relaxed text-bone outline-none focus-visible:border-bone-dim"
         />
         <span className="text-[13px] leading-relaxed text-bone-dim">
@@ -295,7 +290,7 @@ export default function SongForm({
         <span className="label">
           {capoFret
             ? `Behind the capo you play`
-            : `In ${KEYS[counting.root]} that reads${counting.relative ? ", counted from the relative major" : ""}`}
+            : `In ${KEYS[root]} ${tonality} that reads`}
         </span>
         {chart.map((section, index) => (
           <p key={index} className="mt-2 font-mono text-[14px] leading-relaxed">
@@ -318,60 +313,6 @@ export default function SongForm({
           </p>
         ) : null}
       </div>
-
-      {onLyrics ? (
-        <div className="flex flex-col gap-3">
-          <span className="label">Lyrics</span>
-          {/* Stays mounted after it fills, so swapping version is still one tap. */}
-          <LyricsFinder
-            track={title}
-            artist={credit.trim().toLowerCase() === "traditional" ? "" : credit}
-            onPick={onLyrics}
-            auto={chosenSong}
-          >
-            {lyrics || pasting ? null : (
-              <button type="button" className="btn whitespace-nowrap" onClick={() => setPasting(true)}>
-                Paste them in
-              </button>
-            )}
-          </LyricsFinder>
-
-          {lyrics || pasting ? (
-            <>
-              <textarea
-                value={lyrics ?? ""}
-                onChange={(event) => onLyrics(event.target.value)}
-                placeholder="Paste the words here."
-                aria-label="Lyrics"
-                autoFocus={pasting && !lyrics}
-                rows={10}
-                className="w-full rounded-xl border border-line bg-ink p-3 text-[15px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="btn btn-quiet"
-                  onClick={() => {
-                    onLyrics("");
-                    setPasting(false);
-                  }}
-                >
-                  Clear the words
-                </button>
-                <span className="self-center text-[13px] text-bone-dim">
-                  {lyrics?.trim()
-                    ? `${lyrics.trim().split(/\s+/).length} words. Saved with the song.`
-                    : "Saved with the song."}
-                </span>
-              </div>
-            </>
-          ) : (
-            <p className="max-w-[58ch] text-[13px] leading-relaxed text-bone-dim">
-              Optional, and you can add them later. They are only needed to read along on the stand.
-            </p>
-          )}
-        </div>
-      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn btn-primary" disabled={!ready} onClick={save}>

@@ -141,10 +141,13 @@ export default function StageView({ slug }: { slug: string }) {
   // showing, or the one it is written in.
   const asked = Number(params.get("key"));
   const root = set ? keyInSet(set, song) : params.has("key") && Number.isInteger(asked) && asked >= 0 && asked < 12 ? asked : song.root;
+  // The song page can hand over a capo too, when it is being played without one.
+  const askedCapo = Number(params.get("capo"));
+  const capo = !set && params.has("capo") && Number.isInteger(askedCapo) && askedCapo >= 0 ? askedCapo : (song.capo ?? 0);
   const moved = root !== song.root;
   const numbering = numberingOf({ ...song, root });
   // On a stand you need the shape under your fingers, not the concert pitch.
-  const playRoot = shapeRoot(numbering.root, effectiveCapo(song.capo, song.tuning));
+  const playRoot = shapeRoot(numbering.root, effectiveCapo(capo, song.tuning));
   const inTuning = tuningOf(song.tuning).id;
   const hasChart = song.chart.some((section) => section.bars.length > 0);
   const manual = Math.min(MAX_SIZE, Math.max(MIN_SIZE, settings.lyricSize));
@@ -218,9 +221,9 @@ export default function StageView({ slug }: { slug: string }) {
           </span>
         ) : null}
         <span className="text-[16px] text-bone-dim">
-          {effectiveCapo(song.capo, song.tuning)
-            ? `${song.capo ? `Capo ${song.capo} · ` : ""}${KEYS[shapeRoot(root, effectiveCapo(song.capo, song.tuning))]} shapes · sounds ${KEYS[root]}`
-            : `${song.capo ? `Capo ${song.capo} · ` : ""}${KEYS[root]} ${song.tonality}`}
+          {effectiveCapo(capo, song.tuning)
+            ? `${capo ? `Capo ${capo} · ` : ""}${KEYS[shapeRoot(root, effectiveCapo(capo, song.tuning))]} shapes · sounds ${KEYS[root]}`
+            : `${capo ? `Capo ${capo} · ` : ""}${KEYS[root]} ${song.tonality}`}
           {moved ? <span className="font-mono text-[14px]"> · written {KEYS[song.root]}</span> : null}
         </span>
         <div className="ml-auto flex flex-none items-center gap-2">

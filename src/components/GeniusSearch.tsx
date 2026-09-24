@@ -183,7 +183,7 @@ export default function GeniusSearch({
         </p>
       ) : null}
 
-      <p className="text-[13px] leading-relaxed text-bone-dim">
+      <p className="max-w-[65ch] text-[13px] leading-relaxed text-bone-dim">
         Picking one fills in the title and artist, keeps a link back, and then goes looking for the words and the
         chords. Everything it finds is yours to correct.
       </p>

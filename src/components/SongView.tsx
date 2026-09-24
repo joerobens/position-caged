@@ -3,36 +3,51 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { DotsThree, PencilSimple } from "@phosphor-icons/react";
 import { useLibrary } from "@/hooks/useLibrary";
 import SongForm from "@/components/SongForm";
 import { GeniusLink } from "@/components/GeniusSearch";
 import LyricsFinder from "@/components/LyricsFinder";
+import ChartFinder from "@/components/ChartFinder";
+import ChartTemplates from "@/components/ChartTemplates";
+import ChartView from "@/components/ChartView";
 import ChordFamily from "@/components/ChordFamily";
 import SongShapes from "@/components/SongShapes";
-import Panel from "@/components/Panel";
+import SongsOnThis from "@/components/SongsOnThis";
+import KeyLine from "@/components/KeyLine";
 import Popover from "@/components/Popover";
 import AddToSet from "@/components/AddToSet";
-import { CaretDown } from "@phosphor-icons/react";
-import { ICON } from "@/lib/icons";
-import SongsOnThis from "@/components/SongsOnThis";
-import { useSession } from "@/hooks/useSession";
 import { useSettings } from "@/hooks/useSettings";
 import { addSong, findSong, removeSong, setLyrics } from "@/lib/songStore";
-import { KEYS } from "@/lib/music";
-import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
-import { barChords, chartChords, chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
+import { nextSectionName } from "@/lib/chartTemplates";
+import { effectiveCapo } from "@/lib/tunings";
+import { barChords, chartChords, numberingOf, shapeRoot } from "@/lib/nashville";
+import { ICON } from "@/lib/icons";
 
+function initials(title: string) {
+  return title
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join("");
+}
+
+/**
+ * A song, ready to play. The key line says what your hands do, the chart reads
+ * from the stand, and anything wrong is fixed where it stands: a chart line, the
+ * words, or the key. Everything for learning the song sits folded at the foot.
+ */
 export default function SongView({ slug }: { slug: string }) {
   const library = useLibrary();
   const router = useRouter();
   const song = findSong(library, slug);
-  const [transpose, setTranspose] = useState<number | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [editingChart, setEditingChart] = useState(false);
+  // A key and capo to play it in for now, without changing the song.
+  const [now, setNow] = useState<{ root: number; capo: number } | null>(null);
+  const [details, setDetails] = useState(false);
+  const [editingWords, setEditingWords] = useState(false);
+  const [draft, setDraft] = useState("");
   const [confirming, setConfirming] = useState(false);
-  // The words as they were before a fetch replaced them, for as long as you are editing.
-  const [previousWords, setPreviousWords] = useState<string | null>(null);
-  const { session } = useSession();
   const { update } = useSettings();
   const found = Boolean(song);
 
@@ -56,24 +71,22 @@ export default function SongView({ slug }: { slug: string }) {
     );
   }
 
-  const root = transpose ?? song.root;
+  const written = { root: song.root, capo: song.capo ?? 0 };
+  const root = now?.root ?? written.root;
+  const capo = now?.capo ?? written.capo;
+  const moved = root !== written.root || capo !== written.capo;
   const lyrics = library.lyrics[song.slug] ?? "";
+  const hasChart = song.chart.some((section) => section.bars.length > 0);
   // A minor chart is numbered from its relative major, so that is what the
   // numbers are counted and spelled against.
-  const numbering = numberingOf(song);
-  const spellRoot = (root + (numbering.relative ? 3 : 0)) % 12;
-  // With a capo on, the chord you finger is not the chord that sounds. The shapes
-  // are what you need in front of you, so those are what the chart shows.
-  const capo = song.capo ?? 0;
-  // A uniform retuning is a capo with the sign flipped, so the two combine.
-  const tuning = tuningOf(song.tuning);
+  const numbering = numberingOf({ ...song, root });
   const held = effectiveCapo(capo, song.tuning);
-  const playRoot = shapeRoot(spellRoot, held);
-  const hasChart = song.chart.some((section) => section.bars.length > 0);
-  const chords = chartChords(
-    song.chart.flatMap((section) => section.bars),
-    numbering.steps,
-  );
+  // The shapes under your fingers, which is what the chart shows.
+  const playRoot = shapeRoot(numbering.root, held);
+  const bars = song.chart.flatMap((section) => section.bars);
+  const chords = chartChords(bars, numbering.steps);
+  const save = (patch: Partial<typeof song>) => addSong({ ...song, ...patch });
+
   // The first section, counted from the song's own root, with its minors marked.
   const practiceHref = `/practice?topic=changes&clock=drill&key=${shapeRoot(root, held)}&tonality=${song.tonality}&song=${encodeURIComponent(
     song.slug,
@@ -82,287 +95,278 @@ export default function SongView({ slug }: { slug: string }) {
       .map((bar) => `${(bar.offset + (numbering.relative ? 3 : 0)) % 12}${bar.minor ? "m" : ""}`)
       .join(","),
   )}`;
+  const standHref = `/songs/${song.slug}/stand${moved ? `?key=${root}&capo=${capo}` : ""}`;
+  const feel = [song.feel, song.bpm ? `${song.bpm} bpm` : null].filter(Boolean).join(" · ");
 
   return (
-    <main className="mx-auto w-full max-w-[1180px] px-[var(--gutter)] py-7 pb-16">
-      <Link href="/songs" className="-my-2 inline-flex min-h-11 items-center text-[13px] text-bone-dim hover:text-bone">
+    <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 px-[var(--gutter)] py-7 pb-16">
+      <Link href="/songs" className="-my-2 inline-flex min-h-11 items-center self-start text-[13px] text-bone-dim hover:text-bone">
         &larr; Songs
       </Link>
 
-      <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-[24px] font-medium tracking-tight">{song.title}</h1>
-        <span className="text-[15px] text-bone-dim">{song.credit}</span>
-      </div>
-
-      {/* The key you are reading in, and the way to change it, in one place. */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[14px] text-bone-dim">
-        <Popover
-          label={`Key: ${KEYS[root]} ${song.tonality}. Play it in another key`}
-          button={(open) => (
-            <>
-              <span className="label">Key</span>
-              <b className="text-[16px] font-medium text-bone">
-                {KEYS[root]} {song.tonality}
-              </b>
-              <CaretDown size={ICON.sm} weight="bold" style={{ transform: open ? "rotate(180deg)" : undefined }} />
-            </>
-          )}
-        >
-          {(close) => (
-            <>
-              <span className="label">Play it in</span>
-              <div role="group" aria-label="Play it in" className="grid grid-cols-6 gap-1.5">
-                {KEYS.map((name, index) => (
-                  <button
-                    key={name}
-                    type="button"
-                    className="chip px-0"
-                    aria-pressed={index === root}
-                    onClick={() => {
-                      setTranspose(index === song.root ? null : index);
-                      close();
-                    }}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-              <span className="text-[13px] text-bone-dim">Written in {KEYS[song.root]}. The numbers do not change.</span>
-            </>
-          )}
-        </Popover>
-        {transpose !== null && transpose !== song.root ? (
-          <button type="button" className="btn btn-quiet" onClick={() => setTranspose(null)}>
-            Back to {KEYS[song.root]}
-          </button>
-        ) : null}
-        {capo ? <span>Capo {capo}</span> : null}
-        {needsRetune(song.tuning) ? (
-          <span>
-            Tuned {tuning.name.toLowerCase()} <span className="font-mono text-[13px]">{tuning.label}</span>
+      <div className="flex items-center gap-4">
+        {song.art ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={song.art} alt="" className="size-16 flex-none rounded-xl border border-line object-cover" />
+        ) : (
+          <span
+            aria-hidden
+            className="flex size-16 flex-none items-center justify-center rounded-xl border border-line font-mono text-[14px] text-bone-dim"
+          >
+            {initials(song.title)}
           </span>
-        ) : null}
-        {held ? <span>You play {KEYS[shapeRoot(root, held)]} shapes</span> : null}
-        {song.feel ? <span>{song.feel}</span> : null}
-        {song.bpm ? <span>{song.bpm} bpm</span> : null}
+        )}
+        <div className="min-w-0">
+          <h1 className="text-[28px] font-medium leading-tight tracking-tight">{song.title}</h1>
+          <p className="text-[16px] text-bone-dim">{song.credit}</p>
+        </div>
       </div>
 
-      {song.note ? (
-        <p className="mt-3 max-w-[74ch] text-[13px] leading-relaxed text-bone-dim">{song.note}</p>
-      ) : null}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <KeyLine
+          written={written}
+          root={root}
+          capo={capo}
+          tonality={song.tonality}
+          tuning={song.tuning}
+          onChange={(nextRoot, nextCapo) =>
+            setNow(nextRoot === written.root && nextCapo === written.capo ? null : { root: nextRoot, capo: nextCapo })
+          }
+          onKeep={() => {
+            save({ root, capo: capo || undefined });
+            setNow(null);
+          }}
+        />
+        {feel ? <span className="text-[15px] text-bone-dim">{feel}</span> : null}
+      </div>
 
-      {editingChart ? (
-        <div className="mt-5">
-          <SongForm
-            initial={song}
-            submitLabel="Save the changes"
-            onCancel={() => setEditingChart(false)}
-            onSave={(next) => {
-              addSong({ ...next, slug: song.slug });
-              setEditingChart(false);
-            }}
-          />
-        </div>
-      ) : (
-      <>
-      {/* Everything you can do to this song, in one place. */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {/* The stand is worth opening with a chart alone: that is what you glance at. */}
+      {/* The note is about the song as written, so it steps aside while you play it elsewhere. */}
+      {song.note && !moved ? <p className="max-w-[65ch] text-[14px] leading-relaxed text-bone-dim">{song.note}</p> : null}
+
+      {/* One thing to do most of the time, two often, the rest out of the way. */}
+      <div className="flex flex-wrap items-center gap-2">
         {lyrics || hasChart ? (
-          <Link href={`/songs/${song.slug}/stand${root !== song.root ? `?key=${root}` : ""}`} className="btn btn-primary">
+          <Link href={standHref} className="btn btn-primary">
             Open on the stand
           </Link>
         ) : null}
-        <Link href={practiceHref} className="btn">
-          Practise the changes
-        </Link>
+        {hasChart ? (
+          <Link href={practiceHref} className="btn">
+            Practise the changes
+          </Link>
+        ) : null}
         <AddToSet slug={song.slug} root={root !== song.root ? root : undefined} />
-        <button type="button" className="btn" onClick={() => setEditingChart(true)}>
-          Edit the song
-        </button>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
-            Delete
-          </button>
+        <div className="ml-auto">
+          <Popover
+            label="More"
+            className="left-auto right-0"
+            buttonClassName="border-transparent bg-transparent text-bone-dim"
+            button={() => (
+              <>
+                <DotsThree size={ICON.md} weight="bold" />
+                More
+              </>
+            )}
+          >
+            {(close) =>
+              confirming ? (
+                <>
+                  <span className="text-[14px] leading-relaxed text-bone-dim">
+                    Delete <b className="font-medium text-bone">{song.title}</b>?{" "}
+                    {lyrics ? "The words go with it, on every device. " : ""}This cannot be undone.
+                  </span>
+                  <div className="flex gap-2">
+                    <button type="button" className="btn" onClick={() => setConfirming(false)}>
+                      Keep it
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-quiet"
+                      onClick={() => {
+                        removeSong(song.slug);
+                        router.push("/songs");
+                      }}
+                    >
+                      Yes, delete it
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn justify-start"
+                    onClick={() => {
+                      setDetails(true);
+                      close();
+                    }}
+                  >
+                    Edit all details
+                  </button>
+                  <button type="button" className="btn btn-quiet justify-start" onClick={() => setConfirming(true)}>
+                    Delete this song
+                  </button>
+                </>
+              )
+            }
+          </Popover>
         </div>
       </div>
 
-      {confirming ? (
-        <div className="panel mt-3 flex flex-wrap items-center gap-3">
-          <span className="text-[13px] leading-relaxed text-bone-dim">
-            Delete <b className="font-medium text-bone">{song.title}</b>?{" "}
-            {lyrics ? "The words go with it, on every device. " : ""}This cannot be undone.
-          </span>
-          <div className="ml-auto flex gap-2">
-            <button type="button" className="btn" onClick={() => setConfirming(false)}>
-              Keep it
-            </button>
-            <button
-              type="button"
-              className="btn btn-quiet"
-              onClick={() => {
-                removeSong(song.slug);
-                router.push("/songs");
-              }}
-            >
-              Yes, delete it
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {/* the chart, which is the reminder you actually need on a stand */}
-      <Panel id="chart" label="Chart">
-        {song.chart.map((section, sectionIndex) => (
-          <div key={sectionIndex} className="border-b border-line py-3 first:pt-0 last:border-b-0 last:pb-0">
-            <span className="label">{section.name}</span>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {section.bars.map((bar, index) => {
-                const token = parseChord(bar, numbering.steps);
-                return (
-                  <div
-                    key={index}
-                    className="min-w-[64px] rounded-lg border border-line bg-ink px-2 py-1.5 text-center"
-                  >
-                    <div className="font-mono text-[15px] font-medium">{bar}</div>
-                    <div className="mt-0.5 font-mono text-[10px] text-bone-dim">
-                      {token && !token.hold ? chordName(token, playRoot) : " "}
-                    </div>
-                  </div>
-                );
-              })}
+      {details ? (
+        <SongForm
+          initial={song}
+          submitLabel="Save the changes"
+          onCancel={() => setDetails(false)}
+          onSave={(next) => {
+            addSong({ ...next, slug: song.slug });
+            setDetails(false);
+            setNow(null);
+          }}
+        />
+      ) : (
+        <>
+          <section className="panel" aria-label="Chart">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="label">Chart</span>
+              {hasChart ? <span className="text-[13px] text-bone-dim">Tap a line to fix it</span> : null}
             </div>
-          </div>
-        ))}
-        {/* What the numbers mean in this key, so nobody has to work it out mid-song. */}
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-t border-line pt-3 text-[13px] text-bone-dim">
-          <span>{capo ? "Behind the capo you play" : `In ${KEYS[root]} that is`}</span>
-          <span className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[14px] text-bone">
-            {chords.map((token) => (
-              <span key={token.raw}>
-                {token.raw} = {chordName(token, playRoot)}
-              </span>
-            ))}
-          </span>
-          {capo ? (
-            <span className="w-full">
-              It sounds in <b className="font-medium text-bone">{KEYS[root]} {song.tonality}</b>.
-            </span>
-          ) : null}
-        </div>
-      </Panel>
+            {hasChart ? null : (
+              <div className="mt-3 flex flex-col gap-3">
+                <p className="text-[14px] text-bone-dim">
+                  No chart yet. Look for one, start from a common progression, or add a line.
+                </p>
+                <ChartFinder
+                  track={song.title}
+                  artist={song.credit.trim().toLowerCase() === "traditional" ? "" : song.credit}
+                  onFound={(chart) =>
+                    save({
+                      root: chart.root,
+                      tonality: chart.tonality,
+                      numbering: chart.numbering,
+                      capo: chart.capo || undefined,
+                      tuning: chart.tuning && chart.tuning !== "standard" ? chart.tuning : song.tuning,
+                      chart: chart.chart,
+                    })
+                  }
+                />
+                <ChartTemplates
+                  steps={numbering.steps}
+                  relative={numbering.relative}
+                  tonality={song.tonality}
+                  onPick={(line) =>
+                    save({
+                      chart: [
+                        ...song.chart,
+                        { name: nextSectionName(song.chart.length), bars: line.split(/[|\s]+/).filter(Boolean) },
+                      ],
+                    })
+                  }
+                />
+              </div>
+            )}
+            <div className="mt-2">
+              <ChartView chart={song.chart} steps={numbering.steps} playRoot={playRoot} onChange={(chart) => save({ chart })} />
+            </div>
+          </section>
 
-      <SongShapes chords={chords} playRoot={playRoot} />
-
-      </>
-      )}
-
-      {/* your words, kept in this browser */}
-      <Panel
-        id="lyrics"
-        label="Lyrics"
-        aside={
-          <div className="ml-auto flex items-center gap-2">
-            {/* Where the words came from, so you can go back and check them. */}
-            {song.sourceUrl ? <GeniusLink url={song.sourceUrl} /> : null}
-            {lyrics || editing ? (
-              <button type="button" className="btn" onClick={() => {
-                  setEditing((current) => !current);
-                  setPreviousWords(null);
-                }}>
-                {editing ? "Done" : "Edit"}
-              </button>
-            ) : null}
-          </div>
-        }
-      >
-
-        {editing ? (
-          <>
-            {/*
-              * Fetching is part of editing, not just of starting. The words you
-              * have may be the wrong take, or half a verse short, and the only
-              * way to try again used to be to empty the box first.
-              */}
-            <div className="mt-4">
-              <LyricsFinder
-                track={song.title}
-                artist={song.credit.trim().toLowerCase() === "traditional" ? "" : song.credit}
-                onPick={(found) => {
-                  // Kept, so a worse version found by mistake is one tap from undone.
-                  if (lyrics.trim()) setPreviousWords(lyrics);
-                  setLyrics(song.slug, found);
-                }}
-                replacing={Boolean(lyrics.trim())}
-              />
-              {previousWords !== null ? (
-                <div role="status" className="mt-3 flex flex-wrap items-center gap-3 text-[14px] text-bone-dim">
-                  Swapped in the new words.
+          {/* The words, fixed the same way as the chart: open, change, then save or cancel. */}
+          <section className="panel" aria-label="Words">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="label">Words</span>
+              <div className="ml-auto flex items-center gap-2">
+                {song.sourceUrl ? <GeniusLink url={song.sourceUrl} /> : null}
+                {!editingWords && lyrics ? (
                   <button
                     type="button"
-                    className="btn"
+                    className="btn btn-quiet"
                     onClick={() => {
-                      setLyrics(song.slug, previousWords);
-                      setPreviousWords(null);
+                      setDraft(lyrics);
+                      setEditingWords(true);
                     }}
                   >
-                    Put the old ones back
+                    <PencilSimple size={ICON.sm} weight="bold" />
+                    Edit
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            {editingWords ? (
+              <div className="mt-3 flex flex-col gap-3">
+                {/* A fetch fills the draft, so Cancel still puts the old words back. */}
+                <LyricsFinder
+                  track={song.title}
+                  artist={song.credit.trim().toLowerCase() === "traditional" ? "" : song.credit}
+                  onPick={setDraft}
+                  replacing={Boolean(draft.trim())}
+                />
+                <textarea
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  rows={14}
+                  placeholder="Paste the words here."
+                  aria-label="Words"
+                  className="w-full rounded-xl border border-line bg-ink p-3 text-[16px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
+                />
+                <div className="flex justify-end gap-2">
+                  <button type="button" className="btn btn-quiet" onClick={() => setEditingWords(false)}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setLyrics(song.slug, draft);
+                      setEditingWords(false);
+                    }}
+                  >
+                    Save
                   </button>
                 </div>
-              ) : null}
-            </div>
-            <textarea
-              value={lyrics}
-              onChange={(event) => setLyrics(song.slug, event.target.value)}
-              rows={14}
-              placeholder="Paste the words here."
-              aria-label="Lyrics"
-              className="mt-3 w-full rounded-xl border border-line bg-ink p-3 text-[15px] leading-relaxed text-bone outline-none placeholder:text-bone-dim focus-visible:border-bone-dim"
-            />
-            <p className="mt-2 text-[13px] leading-relaxed text-bone-dim">
-              {session
-                ? "Saved as you type, and synced to your other devices."
-                : "Saved as you type, in this browser only. Sign in from Account to keep them across devices."}
-            </p>
-          </>
-        ) : lyrics ? (
-          <pre className="mt-4 whitespace-pre-wrap font-[family-name:var(--font-display)] text-[18px] leading-[1.85] text-bone">
-            {lyrics}
-          </pre>
-        ) : (
-          /* Empty state: say what is missing, then offer both ways to fix it. */
-          <div className="mt-4 flex flex-col gap-4">
-            <p className="max-w-[58ch] text-[14px] leading-relaxed text-bone-dim">
-              No words yet.
-            </p>
-            <LyricsFinder
-              track={song.title}
-              artist={song.credit === "traditional" ? "" : song.credit}
-              onPick={(found) => {
-                setLyrics(song.slug, found);
-                setEditing(true);
-              }}
-            >
-              <button type="button" className="btn whitespace-nowrap" onClick={() => setEditing(true)}>
-                Paste them in
-              </button>
-            </LyricsFinder>
-          </div>
-        )}
-      </Panel>
+              </div>
+            ) : lyrics ? (
+              <pre className="mt-3 whitespace-pre-wrap font-[family-name:var(--font-display)] text-[19px] leading-[1.8] text-bone">
+                {lyrics}
+              </pre>
+            ) : (
+              <div className="mt-3 flex flex-col gap-3">
+                <p className="text-[14px] text-bone-dim">No words yet.</p>
+                <LyricsFinder
+                  track={song.title}
+                  artist={song.credit.trim().toLowerCase() === "traditional" ? "" : song.credit}
+                  onPick={(words) => {
+                    setDraft(words);
+                    setEditingWords(true);
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn whitespace-nowrap"
+                    onClick={() => {
+                      setDraft("");
+                      setEditingWords(true);
+                    }}
+                  >
+                    Paste them in
+                  </button>
+                </LyricsFinder>
+              </div>
+            )}
+          </section>
 
-      {/* For learning the song rather than playing it, so they come last and start folded. */}
-      {!editingChart ? (
-        <>
-          <ChordFamily
-            root={root}
-            tonality={song.tonality}
-            numbering={numbering}
-            used={song.chart.flatMap((section) => section.bars)}
-          />
-          <SongsOnThis bars={song.chart[0]?.bars ?? []} />
+          {/* For learning the song rather than playing it, so they come last and start folded. */}
+          {hasChart ? (
+            <section aria-label="Learn this song" className="flex flex-col">
+              <span className="label mt-2">Learn this song</span>
+              <SongShapes chords={chords} playRoot={playRoot} />
+              <ChordFamily root={root} tonality={song.tonality} numbering={numbering} used={bars} />
+              <div className="mt-4">
+                <SongsOnThis bars={song.chart[0]?.bars ?? []} />
+              </div>
+            </section>
+          ) : null}
         </>
-      ) : null}
+      )}
     </main>
   );
 }
