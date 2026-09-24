@@ -16,6 +16,8 @@ export default function SetEditor({ id }: { id: string }) {
   const set = findSet(library, id);
   const [adding, setAdding] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // The last song taken out, and where it was, so a mis-tap can be put right.
+  const [removed, setRemoved] = useState<{ slug: string; index: number; title: string } | null>(null);
 
   if (!set) {
     return (
@@ -38,7 +40,7 @@ export default function SetEditor({ id }: { id: string }) {
 
   return (
     <main className="mx-auto w-full max-w-[1180px] px-[var(--gutter)] py-7 pb-16">
-      <Link href="/sets" className="text-[13px] text-bone-dim hover:text-bone">
+      <Link href="/sets" className="-my-2 inline-flex min-h-11 items-center text-[13px] text-bone-dim hover:text-bone">
         &larr; Sets
       </Link>
 
@@ -97,6 +99,23 @@ export default function SetEditor({ id }: { id: string }) {
         </p>
       ) : (
         <ol className="mt-5 overflow-hidden rounded-xl border border-line">
+          {removed && !set.slugs.includes(removed.slug) ? (
+            <li role="status" className="flex flex-wrap items-center gap-3 border-b border-line bg-ink px-4 py-2 text-[14px] text-bone-dim">
+              Took <b className="font-medium text-bone">{removed.title}</b> out.
+              <button
+                type="button"
+                className="btn ml-auto"
+                onClick={() => {
+                  const slugs = [...set.slugs];
+                  slugs.splice(Math.min(removed.index, slugs.length), 0, removed.slug);
+                  saveSet({ ...set, slugs });
+                  setRemoved(null);
+                }}
+              >
+                Put it back
+              </button>
+            </li>
+          ) : null}
           {inSet.map((song, index) => (
             <li key={song!.slug} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-panel px-3 py-2.5 last:border-b-0">
               <span className="w-6 flex-none text-center font-mono text-[13px] text-bone-dim">{index + 1}</span>
@@ -117,7 +136,7 @@ export default function SetEditor({ id }: { id: string }) {
               <span className="flex flex-none gap-1.5">
                 <button
                   type="button"
-                  className="btn px-2.5"
+                  className="btn size-11 px-0"
                   aria-label={`Move ${song!.title} earlier`}
                   disabled={index === 0}
                   onClick={() => saveSet(moveInSet(set, index, -1))}
@@ -126,18 +145,22 @@ export default function SetEditor({ id }: { id: string }) {
                 </button>
                 <button
                   type="button"
-                  className="btn px-2.5"
+                  className="btn size-11 px-0"
                   aria-label={`Move ${song!.title} later`}
                   disabled={index === inSet.length - 1}
                   onClick={() => saveSet(moveInSet(set, index, 1))}
                 >
                   <ArrowDown size={ICON.sm} weight="bold" />
                 </button>
+                {/* Set apart from the arrows, and undoable, because it is the one that loses something. */}
                 <button
                   type="button"
-                  className="btn px-2.5"
+                  className="btn btn-quiet ml-3 size-11 px-0"
                   aria-label={`Take ${song!.title} out`}
-                  onClick={() => saveSet({ ...set, slugs: set.slugs.filter((slug) => slug !== song!.slug) })}
+                  onClick={() => {
+                    setRemoved({ slug: song!.slug, index, title: song!.title });
+                    saveSet({ ...set, slugs: set.slugs.filter((slug) => slug !== song!.slug) });
+                  }}
                 >
                   <X size={ICON.sm} weight="bold" />
                 </button>

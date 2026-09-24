@@ -392,7 +392,10 @@ function Fretboard({
     <svg
       className="block h-auto w-full"
       viewBox={view.box.join(" ")}
-      preserveAspectRatio="xMidYMid meet"
+      // A close view is narrower than the frame it sits in. Centred, it left a
+      // third of the frame empty to the left of the nut; held to the left, the
+      // shape starts at the edge and the rest of the neck carries on beside it.
+      preserveAspectRatio={view.box[2] < BOARD_WIDTH ? "xMinYMid meet" : "xMidYMid meet"}
       role="img"
       aria-label={
         spiderWindow
@@ -479,6 +482,17 @@ function Fretboard({
           {fret}
         </text>
       ))}
+      {/* Away from the nut the strings run on under the names, so give the names
+          a patch of board to sit on rather than drawing them over the strings. */}
+      {view.box[0] > 0 ? (
+        <rect
+          x={view.box[0]}
+          y={TOP_Y - 14}
+          width={view.labelX - view.box[0] + 14}
+          height={5 * STRING_GAP + 28}
+          fill={palette.board}
+        />
+      ) : null}
       {STRING_LABELS.map((name, string) => (
         <text key={`label-${string}`} className="fb-mark" x={view.labelX} y={stringY(string) + 4} textAnchor="middle">
           {name}

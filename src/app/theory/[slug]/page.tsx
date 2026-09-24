@@ -52,7 +52,7 @@ export default async function TheoryDetail({ params }: { params: Promise<{ slug:
     <>
       <SiteNav />
       <main className="mx-auto w-full max-w-[1180px] px-[var(--gutter)] py-7 pb-16">
-        <Link href="/theory" className="text-[13px] text-bone-dim hover:text-bone">
+        <Link href="/theory" className="-my-2 inline-flex min-h-11 items-center text-[13px] text-bone-dim hover:text-bone">
           &larr; Theory
         </Link>
         <p className="label mt-3">{page.n}</p>

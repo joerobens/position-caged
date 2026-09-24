@@ -67,7 +67,6 @@ const INFO = {
   backing:
     "The chords of the progression, played as they come round, so there is something under you to play over. It lands on the downbeat of each bar with the click, and sits well below whatever you are playing.",
   click: "The click itself. Turning it off leaves the pips and the shape changes running silently, which is what you want over a backing track.",
-  spiderStart: "The fret the index finger starts on. The exercise covers four frets from there, one per finger.",
   spiderPattern:
     "The order the fingers go in. 1-2-3-4 is the plain walk; the others break up the order, which is harder and better for independence.",
   spiderShape:
@@ -575,7 +574,7 @@ export default function Page() {
             {theory ? (
               <Link
                 href={`/theory/${theory.slug}`}
-                className="ml-auto text-[14px] text-bone underline decoration-line underline-offset-4 hover:decoration-bone-dim"
+                className="-my-2 ml-auto inline-flex min-h-11 items-center text-[14px] text-bone underline decoration-line underline-offset-4 hover:decoration-bone-dim"
               >
                 Why? {theory.title} &rarr;
               </Link>
@@ -840,16 +839,14 @@ export default function Page() {
             <>
               <div className="panel flex flex-col gap-4">
                 <p className="text-[13px] leading-relaxed text-bone-dim">{drill?.blurb}</p>
-                <Field label="Start fret" info={INFO.spiderStart}>
-                  <Slider
-                    label="Start fret"
-                    value={settings.spiderStartFret}
-                    min={1}
-                    max={FRET_COUNT - 3}
-                    onChange={(value) => update({ spiderStartFret: value })}
-                    display={`fret ${settings.spiderStartFret}`}
-                  />
-                </Field>
+                <Slider
+                  label="Start fret"
+                  value={settings.spiderStartFret}
+                  min={1}
+                  max={FRET_COUNT - 3}
+                  onChange={(value) => update({ spiderStartFret: value })}
+                  display={`fret ${settings.spiderStartFret}`}
+                />
                 <Field label="Finger order" info={INFO.spiderPattern}>
                   <ChipGroup
                     ariaLabel="Finger order"
