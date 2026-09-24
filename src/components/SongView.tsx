@@ -30,6 +30,8 @@ export default function SongView({ slug }: { slug: string }) {
   const [editing, setEditing] = useState(false);
   const [editingChart, setEditingChart] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // The words as they were before a fetch replaced them, for as long as you are editing.
+  const [previousWords, setPreviousWords] = useState<string | null>(null);
   const { session } = useSession();
   const { update } = useSettings();
   const found = Boolean(song);
@@ -264,7 +266,10 @@ export default function SongView({ slug }: { slug: string }) {
             {/* Where the words came from, so you can go back and check them. */}
             {song.sourceUrl ? <GeniusLink url={song.sourceUrl} /> : null}
             {lyrics || editing ? (
-              <button type="button" className="btn" onClick={() => setEditing((current) => !current)}>
+              <button type="button" className="btn" onClick={() => {
+                  setEditing((current) => !current);
+                  setPreviousWords(null);
+                }}>
                 {editing ? "Done" : "Edit"}
               </button>
             ) : null}
@@ -283,9 +288,28 @@ export default function SongView({ slug }: { slug: string }) {
               <LyricsFinder
                 track={song.title}
                 artist={song.credit.trim().toLowerCase() === "traditional" ? "" : song.credit}
-                onPick={(found) => setLyrics(song.slug, found)}
+                onPick={(found) => {
+                  // Kept, so a worse version found by mistake is one tap from undone.
+                  if (lyrics.trim()) setPreviousWords(lyrics);
+                  setLyrics(song.slug, found);
+                }}
                 replacing={Boolean(lyrics.trim())}
               />
+              {previousWords !== null ? (
+                <div role="status" className="mt-3 flex flex-wrap items-center gap-3 text-[14px] text-bone-dim">
+                  Swapped in the new words.
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      setLyrics(song.slug, previousWords);
+                      setPreviousWords(null);
+                    }}
+                  >
+                    Put the old ones back
+                  </button>
+                </div>
+              ) : null}
             </div>
             <textarea
               value={lyrics}

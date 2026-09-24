@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import GeniusSearch from "@/components/GeniusSearch";
 import { TUNINGS, effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import LyricsFinder from "@/components/LyricsFinder";
@@ -13,6 +13,8 @@ import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
 import type { Song } from "@/lib/songs";
 
 /** Create and edit are the same form, so a chart cannot be writable once and never again. */
+const EXAMPLE_CHART = "Verse: 1 1 4 1 | 1 5 1 1";
+
 export default function SongForm({
   initial,
   submitLabel,
@@ -42,8 +44,24 @@ export default function SongForm({
   const chartId = useId();
   const [feel, setFeel] = useState(initial?.feel ?? "");
   const [bpm, setBpm] = useState(initial?.bpm ? String(initial.bpm) : "");
-  const [text, setText] = useState(initial ? chartToText(initial.chart) : "Verse: 1 1 4 1 | 1 5 1 1");
+  const [text, setText] = useState(initial ? chartToText(initial.chart) : EXAMPLE_CHART);
   const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? "");
+  // A found chart waiting for a yes, because there is already one here.
+  const [proposal, setProposal] = useState<FoundChart | null>(null);
+  const textNow = useRef(text);
+  useEffect(() => {
+    textNow.current = text;
+  }, [text]);
+  // Only an empty box, or a new song's untouched example, is safe to fill without asking.
+  const untouched = (current: string) => !current.trim() || (!initial && current === EXAMPLE_CHART);
+  const takeChart = (found: FoundChart) => {
+    setRoot(found.root);
+    setTonality(found.tonality);
+    setNumbering(found.numbering);
+    setCapo(found.capo ? String(found.capo) : "");
+    if (found.tuning) setTuning(found.tuning);
+    setText(found.chart.map((section) => `${section.name}: ${section.bars.join(" ")}`).join("\n"));
+  };
   const [art, setArt] = useState(initial?.art ?? "");
 
   const chart = textToChart(text);
@@ -85,6 +103,7 @@ export default function SongForm({
       <GeniusSearch
         caption={initial ? "Find the song, to fill in title, artist and link" : "Find the song"}
         linked={sourceUrl ? { title, artist: credit, url: sourceUrl, art } : null}
+        onArtwork={setArt}
         onPick={(hit) => {
           setTitle(hit.title);
           setCredit(hit.artist);
@@ -210,14 +229,43 @@ export default function SongForm({
           artist={credit.trim().toLowerCase() === "traditional" ? "" : credit}
           auto={chosenSong}
           onFound={(found: FoundChart) => {
-            setRoot(found.root);
-            setTonality(found.tonality);
-            setNumbering(found.numbering);
-            setCapo(found.capo ? String(found.capo) : "");
-            if (found.tuning) setTuning(found.tuning);
-            setText(found.chart.map((section) => `${section.name}: ${section.bars.join(" ")}`).join("\n"));
+            // Read the chart as it is now, not as it was when the lookup set off.
+            if (untouched(textNow.current)) takeChart(found);
+            else setProposal(found);
           }}
         />
+        {/*
+          * A chart you have written, or corrected by ear, is the most valuable
+          * thing here. A found one never replaces it without asking.
+          */}
+        {proposal ? (
+          <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-ink px-3 py-2.5 text-[14px]">
+            <span className="text-bone-dim">
+              Found a chart:{" "}
+              <b className="font-medium text-bone">
+                {KEYS[proposal.root]} {proposal.tonality}
+                {proposal.capo ? `, capo ${proposal.capo}` : ""}, {proposal.chart.length} section
+                {proposal.chart.length === 1 ? "" : "s"}
+              </b>
+              . Using it replaces the chart, key and capo here.
+            </span>
+            <span className="ml-auto flex gap-2">
+              <button type="button" className="btn btn-quiet" onClick={() => setProposal(null)}>
+                Keep mine
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  takeChart(proposal);
+                  setProposal(null);
+                }}
+              >
+                Use it
+              </button>
+            </span>
+          </div>
+        ) : null}
         <ChartTemplates
           steps={counting.steps}
           relative={counting.relative}

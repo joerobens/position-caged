@@ -11,10 +11,16 @@ import { ICON } from "@/lib/icons";
  */
 export default function GeniusSearch({
   onPick,
+  onArtwork,
   caption = "Find the song",
   linked,
 }: {
   onPick: (hit: { title: string; artist: string; url: string; art: string | null }) => void;
+  /**
+   * Artwork only. Kept apart from onPick because picking a song goes on to look
+   * for its words and chords, and fetching a picture must never do that.
+   */
+  onArtwork?: (art: string) => void;
   caption?: string;
   /**
    * A song that is already linked, so editing one shows what it is linked to
@@ -119,9 +125,9 @@ export default function GeniusSearch({
                   const body = (await response.json()) as { hits?: GeniusHit[] };
                   // The same song, by its own link, rather than whatever ranks first.
                   const same = body.hits?.find((hit) => hit.url === picked.url) ?? body.hits?.[0];
-                  if (same) {
-                    setPicked(same);
-                    onPick({ title: same.title, artist: same.artist, url: same.url, art: same.art });
+                  if (same?.art) {
+                    setPicked({ ...picked, art: same.art });
+                    onArtwork?.(same.art);
                   }
                 } catch {
                   // Nothing to do: the row simply keeps its initials.
