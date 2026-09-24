@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Design mockups and rendered previews, kept out of the repo
 previews/
+
+# impeccable design-tool snapshots
+.impeccable/
