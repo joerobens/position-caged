@@ -1,4 +1,4 @@
-import { claimLibrary, getSnapshot, markSynced, mergeFromRemote, type Library } from "./songStore";
+import { claimLibrary, getSnapshot, markSynced, mergeFromRemote, packSlugs, unpackSlugs, type Library } from "./songStore";
 import {
   getSupabase,
   type LyricInsert,
@@ -94,7 +94,7 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
     if (isNewer(local.touched[`sets:${row.id}`], row.updated_at)) continue;
     next.sets = [
       ...next.sets.filter((set) => set.id !== row.id),
-      { id: row.id, name: row.name, slugs: row.slugs, note: row.note ?? undefined },
+      { id: row.id, name: row.name, ...unpackSlugs(row.slugs), note: row.note ?? undefined },
     ];
     next.touched[`sets:${row.id}`] = Date.parse(row.updated_at);
     pulled++;
@@ -138,7 +138,7 @@ export async function syncLibrary(userId: string): Promise<SyncResult> {
       user_id: userId,
       id: set.id,
       name: set.name,
-      slugs: set.slugs,
+      slugs: packSlugs(set),
       note: set.note ?? null,
     });
   }

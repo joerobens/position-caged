@@ -167,14 +167,14 @@ export default function SongView({ slug }: { slug: string }) {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {/* The stand is worth opening with a chart alone: that is what you glance at. */}
         {lyrics || hasChart ? (
-          <Link href={`/songs/${song.slug}/stand`} className="btn btn-primary">
+          <Link href={`/songs/${song.slug}/stand${root !== song.root ? `?key=${root}` : ""}`} className="btn btn-primary">
             Open on the stand
           </Link>
         ) : null}
         <Link href={practiceHref} className="btn">
           Practise the changes
         </Link>
-        <AddToSet slug={song.slug} />
+        <AddToSet slug={song.slug} root={root !== song.root ? root : undefined} />
         <button type="button" className="btn" onClick={() => setEditingChart(true)}>
           Edit the song
         </button>

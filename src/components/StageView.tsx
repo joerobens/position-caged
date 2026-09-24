@@ -11,7 +11,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import { findSet, findSong } from "@/lib/songStore";
+import { findSet, findSong, keyInSet } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import { chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
@@ -137,7 +137,12 @@ export default function StageView({ slug }: { slug: string }) {
     );
   }
 
-  const numbering = numberingOf(song);
+  // The key it is played in tonight: the set's, or the one the song page was
+  // showing, or the one it is written in.
+  const asked = Number(params.get("key"));
+  const root = set ? keyInSet(set, song) : params.has("key") && Number.isInteger(asked) && asked >= 0 && asked < 12 ? asked : song.root;
+  const moved = root !== song.root;
+  const numbering = numberingOf({ ...song, root });
   // On a stand you need the shape under your fingers, not the concert pitch.
   const playRoot = shapeRoot(numbering.root, effectiveCapo(song.capo, song.tuning));
   const inTuning = tuningOf(song.tuning).id;
@@ -214,8 +219,9 @@ export default function StageView({ slug }: { slug: string }) {
         ) : null}
         <span className="text-[16px] text-bone-dim">
           {effectiveCapo(song.capo, song.tuning)
-            ? `${song.capo ? `Capo ${song.capo} · ` : ""}${KEYS[shapeRoot(song.root, effectiveCapo(song.capo, song.tuning))]} shapes · sounds ${KEYS[song.root]}`
-            : `${song.capo ? `Capo ${song.capo} · ` : ""}${KEYS[song.root]} ${song.tonality}`}
+            ? `${song.capo ? `Capo ${song.capo} · ` : ""}${KEYS[shapeRoot(root, effectiveCapo(song.capo, song.tuning))]} shapes · sounds ${KEYS[root]}`
+            : `${song.capo ? `Capo ${song.capo} · ` : ""}${KEYS[root]} ${song.tonality}`}
+          {moved ? <span className="font-mono text-[14px]"> · written {KEYS[song.root]}</span> : null}
         </span>
         <div className="ml-auto flex flex-none items-center gap-2">
           {hasChart ? (

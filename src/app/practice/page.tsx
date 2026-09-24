@@ -441,7 +441,7 @@ export default function Page() {
       ? [`Every ${KEYS[settings.root]} on the neck`, "the roots, and the octaves between them"]
       : view.landmarkDrawn
         ? [
-            settings.pentLandmarks ? "Both landmarks" : `Box ${settings.pentShape}`,
+            view.bothLandmarks ? "Both landmarks" : `Box ${settings.pentShape}`,
             // Named for the key you are in, not for whichever name the boxes happen to
             // be built from. Picking C major and being told A minor is a small lie.
             `${KEYS[settings.root]} ${settings.tonality} pentatonic${moving}`,
@@ -555,7 +555,7 @@ export default function Page() {
               landmark={
                 view.landmarkDrawn
                   ? {
-                      shape: settings.pentLandmarks ? ("landmarks" as const) : settings.pentShape,
+                      shape: view.bothLandmarks ? ("landmarks" as const) : settings.pentShape,
                       minorRoot: settings.tonality === "minor" ? settings.root : relativeMinor(settings.root),
                       showRun: settings.showRun,
                     }
@@ -750,7 +750,7 @@ export default function Page() {
                 )}
               </div>
               <div className="panel flex flex-col gap-4">
-                {!settings.pentLandmarks || view.drilling ? runToggle : null}
+                {!view.bothLandmarks ? runToggle : null}
                 {inEachDot}
               </div>
             </>
@@ -939,10 +939,10 @@ export default function Page() {
         ) : view.landmarkDrawn ? (
           <>
             <b className="font-medium text-bone">
-              {settings.pentLandmarks ? "Boxes 1 and 4" : `Box ${settings.pentShape}`} of the{" "}
+              {view.bothLandmarks ? "Boxes 1 and 4" : `Box ${settings.pentShape}`} of the{" "}
               {KEYS[settings.tonality === "minor" ? settings.root : relativeMinor(settings.root)]} minor pentatonic
             </b>
-            {settings.pentLandmarks
+            {view.bothLandmarks
               ? ", the two landmarks"
               : LANDMARKS.includes(settings.pentShape)
                 ? ", one of the two landmarks"
@@ -953,7 +953,7 @@ export default function Page() {
             {KEYS[settings.tonality === "minor" ? settings.root : relativeMinor(settings.root)]} minor and{" "}
             {KEYS[settings.tonality === "major" ? settings.root : relativeMajor(settings.root)]} major, and which is
             home depends only on the key you are in.
-            {settings.pentLandmarks
+            {view.bothLandmarks
               ? ""
               : " The line is the diagonal run: two frets below the box, notes in pairs, a slide at the end of each pair."}
           </>

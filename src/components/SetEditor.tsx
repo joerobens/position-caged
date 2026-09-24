@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Plus, X } from "@phosphor-icons/react";
 import { useLibrary } from "@/hooks/useLibrary";
-import { allSongs, findSet, moveInSet, removeSet, saveSet } from "@/lib/songStore";
+import { allSongs, findSet, keyInSet, moveInSet, removeSet, saveSet } from "@/lib/songStore";
+import Popover from "@/components/Popover";
 import { KEYS } from "@/lib/music";
 import { needsRetune, tuningOf } from "@/lib/tunings";
 import { ICON } from "@/lib/icons";
@@ -130,9 +131,48 @@ export default function SetEditor({ id }: { id: string }) {
               {library.lyrics[song!.slug]?.trim() ? null : (
                 <span className="flex-none font-mono text-[11px] text-bone-dim">no words</span>
               )}
-              <span className="flex-none font-mono text-[12px] text-bone-dim">
-                {KEYS[song!.root]} {song!.tonality}
-              </span>
+              {/* The key for this gig, which can differ from the key it is written in. */}
+              <Popover
+                label={`${song!.title}: played in ${KEYS[keyInSet(set, song!)]}. Change it for this set`}
+                className="left-auto right-0"
+                buttonClassName="min-h-11 border-transparent bg-transparent px-2.5 text-[13px]"
+                button={() => (
+                  <span className="flex items-baseline gap-1.5">
+                    <span className={keyInSet(set, song!) === song!.root ? "text-bone-dim" : "font-medium text-bone"}>
+                      {KEYS[keyInSet(set, song!)]} {song!.tonality}
+                    </span>
+                    {keyInSet(set, song!) === song!.root ? null : (
+                      <span className="font-mono text-[11px] text-bone-dim">written {KEYS[song!.root]}</span>
+                    )}
+                  </span>
+                )}
+              >
+                {(close) => (
+                  <>
+                    <span className="label">Play it in, for this set</span>
+                    <div role="group" aria-label={`Key for ${song!.title}`} className="grid grid-cols-6 gap-1.5">
+                      {KEYS.map((name, root) => (
+                        <button
+                          key={name}
+                          type="button"
+                          className="chip px-0"
+                          aria-pressed={root === keyInSet(set, song!)}
+                          onClick={() => {
+                            const keys = { ...set.keys };
+                            if (root === song!.root) delete keys[song!.slug];
+                            else keys[song!.slug] = root;
+                            saveSet({ ...set, keys });
+                            close();
+                          }}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[13px] text-bone-dim">Written in {KEYS[song!.root]}. The chart follows.</span>
+                  </>
+                )}
+              </Popover>
               <span className="flex flex-none gap-1.5">
                 <button
                   type="button"

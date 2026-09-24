@@ -28,6 +28,8 @@ export type ViewModel = {
   zoom: Zoom;
   /** All five chord shapes at once, rather than one. */
   allShapes: boolean;
+  /** Both pentatonic landmarks at once, rather than one box. */
+  bothLandmarks: boolean;
   /** The scale layer is on the neck. */
   scaleDrawn: boolean;
   /** The View control has two distinct outcomes. */
@@ -60,7 +62,10 @@ export function deriveView(settings: Settings): ViewModel {
   const zoom: Zoom =
     spiderDrawn || changesDrawn || keysDrawn ? "position" : rootMapDrawn || landmarkDrawn ? "neck" : settings.zoom;
 
-  const allShapes = topic === "shapes" && settings.allShapes;
+  // A drill moves you from one shape or box to the next, so it has to show one.
+  // Every shape at once, or both landmarks, would leave it moving invisibly.
+  const allShapes = topic === "shapes" && !drilling && settings.allShapes;
+  const bothLandmarks = landmarkDrawn && !drilling && settings.pentLandmarks;
   const scaleAvailable = topic === "shapes" && !allShapes;
   const moves = drilling && (settings.drill === "caged" || settings.drill === "slide" || settings.drill === "boxes");
 
@@ -75,6 +80,7 @@ export function deriveView(settings: Settings): ViewModel {
     keysDrawn,
     zoom,
     allShapes,
+    bothLandmarks,
     scaleDrawn: scaleAvailable && settings.showScale,
     zoomAvailable: topic === "shapes" && !allShapes,
     scaleAvailable,

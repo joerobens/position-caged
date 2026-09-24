@@ -11,8 +11,39 @@ export type SetList = {
   name: string;
   /** Song slugs, in the order you play them. */
   slugs: string[];
+  /**
+   * The key a song is played in for this set, by slug, when it is not the key
+   * it is written in. Transposing for a singer belongs to the gig, not the song.
+   */
+  keys?: Record<string, number>;
   note?: string;
 };
+
+/*
+ * The database holds a set's running order as a plain list of slugs. A key
+ * travels inside that list as "slug@4", only on the way to and from the
+ * database, so the table needs no new column and the app never sees the form.
+ * Slugs are letters, digits and dashes, so the @ can never be part of one.
+ */
+export function packSlugs(set: SetList): string[] {
+  return set.slugs.map((slug) => (set.keys?.[slug] === undefined ? slug : `${slug}@${set.keys[slug]}`));
+}
+
+export function unpackSlugs(packed: string[]): Pick<SetList, "slugs" | "keys"> {
+  const keys: Record<string, number> = {};
+  const slugs = packed.map((entry) => {
+    const [slug, key] = entry.split("@");
+    const root = Number(key);
+    if (key !== undefined && Number.isInteger(root) && root >= 0 && root < 12) keys[slug] = root;
+    return slug;
+  });
+  return Object.keys(keys).length ? { slugs, keys } : { slugs };
+}
+
+/** The key a song sounds in within a set: its own, unless the set says otherwise. */
+export function keyInSet(set: SetList | undefined, song: Song): number {
+  return set?.keys?.[song.slug] ?? song.root;
+}
 
 export type Library = {
   /**

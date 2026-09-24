@@ -6,9 +6,10 @@ import Popover from "@/components/Popover";
 import { useLibrary } from "@/hooks/useLibrary";
 import { saveSet } from "@/lib/songStore";
 import { ICON } from "@/lib/icons";
+import { KEYS } from "@/lib/music";
 
 /** Put this song on the end of a set, from the song itself rather than from the set. */
-export default function AddToSet({ slug }: { slug: string }) {
+export default function AddToSet({ slug, root }: { slug: string; root?: number }) {
   const library = useLibrary();
   const holding = library.sets.filter((set) => set.slugs.includes(slug)).length;
 
@@ -34,7 +35,14 @@ export default function AddToSet({ slug }: { slug: string }) {
                   type="button"
                   className="chip flex w-full items-center justify-between gap-3 text-left disabled:opacity-100"
                   disabled={inIt}
-                  onClick={() => saveSet({ ...set, slugs: [...set.slugs, slug] })}
+                  onClick={() =>
+                    saveSet({
+                      ...set,
+                      slugs: [...set.slugs, slug],
+                      // Transposed on the song page, it goes into the set in that key.
+                      keys: root === undefined ? set.keys : { ...set.keys, [slug]: root },
+                    })
+                  }
                 >
                   <span className="truncate">{set.name}</span>
                   <span className="flex flex-none items-center gap-1.5 text-[12px] text-bone-dim">
@@ -44,7 +52,7 @@ export default function AddToSet({ slug }: { slug: string }) {
                         in it, number {set.slugs.indexOf(slug) + 1}
                       </>
                     ) : (
-                      `${set.slugs.length} song${set.slugs.length === 1 ? "" : "s"}`
+                      `${set.slugs.length} song${set.slugs.length === 1 ? "" : "s"}${root === undefined ? "" : ` · add in ${KEYS[root]}`}`
                     )}
                   </span>
                 </button>
