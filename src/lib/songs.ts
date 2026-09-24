@@ -115,7 +115,3 @@ export const SEEDED_SONGS: Song[] = [
     note: "In three, which most practice material is not. Useful purely for that.",
   },
 ];
-
-export function findSeeded(slug: string): Song | undefined {
-  return SEEDED_SONGS.find((song) => song.slug === slug);
-}

@@ -1,9 +1,9 @@
 import { SEEDED_SONGS, type Song } from "./songs";
 
 /**
- * Your half of the library. Lyrics you paste and songs you add live here, in the
- * browser, and are never committed: the repo is public, and words are somebody's
- * property in a way a chord progression is not.
+ * Your library. Songs, lyrics and sets live here, in the browser, and are never
+ * committed: the repo is public, and words are somebody's property in a way a
+ * chord progression is not.
  */
 /** An ordered list of songs, for playing straight through. */
 export type SetList = {
@@ -28,8 +28,11 @@ export type Library = {
    * reaches the database and the next sync pulls the song straight back down.
    */
   deleted: Record<string, number>;
-  /** Seeded songs you would rather not see. They cannot be deleted, only hidden. */
-  hidden: string[];
+  /**
+   * Whether the starter songs have been copied in. They are given once, as
+   * ordinary songs, and after that they are yours to edit or delete like any other.
+   */
+  seeded: boolean;
   /** Lyrics keyed by song slug. */
   lyrics: Record<string, string>;
   /** Songs you added yourself. */
@@ -44,7 +47,7 @@ export type Library = {
 };
 
 const KEY = "position:songs:v1";
-const EMPTY: Library = { ownerId: null, syncedAt: 0, lyrics: {}, own: [], sets: [], touched: {}, deleted: {}, hidden: [] };
+const EMPTY: Library = { ownerId: null, syncedAt: 0, lyrics: {}, own: [], sets: [], touched: {}, deleted: {}, seeded: false };
 
 let cache: Library | null = null;
 const listeners = new Set<() => void>();
@@ -53,30 +56,46 @@ function read(): Library {
   if (typeof window === "undefined") return EMPTY;
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as Partial<Library>;
-    return {
+    const parsed = (raw ? JSON.parse(raw) : {}) as Partial<Library> & { hidden?: unknown };
+    const library: Library = {
       ownerId: parsed.ownerId ?? null,
       syncedAt: parsed.syncedAt ?? 0,
       deleted: parsed.deleted ?? {},
-      hidden: Array.isArray(parsed.hidden) ? parsed.hidden : [],
+      seeded: parsed.seeded ?? false,
       lyrics: parsed.lyrics ?? {},
       own: Array.isArray(parsed.own) ? parsed.own : [],
       sets: Array.isArray(parsed.sets) ? parsed.sets : [],
       touched: parsed.touched ?? {},
     };
+    if (library.seeded) return library;
+    // Starter songs used to live apart, in code, and could only be hidden. The
+    // ones still showing become ordinary songs; the ones put away stay away.
+    const hidden = new Set(Array.isArray(parsed.hidden) ? (parsed.hidden as string[]) : []);
+    const given = SEEDED_SONGS.filter(
+      (song) =>
+        !hidden.has(song.slug) &&
+        !library.deleted[`songs:${song.slug}`] &&
+        !library.own.some((entry) => entry.slug === song.slug),
+    );
+    const next = { ...library, own: [...library.own, ...given], seeded: true };
+    persist(next);
+    return next;
   } catch {
     return EMPTY;
   }
 }
 
-function write(next: Library) {
-  cache = next;
+function persist(next: Library) {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
     // Private browsing or a full quota. The session still works, it just forgets.
   }
+}
+
+function write(next: Library) {
+  cache = next;
+  persist(next);
   for (const listener of listeners) listener();
 }
 
@@ -138,38 +157,12 @@ export function removeSong(slug: string) {
   });
 }
 
-/** A seeded chart cannot be deleted, since it is code, but it can be put away. */
-export function hideSeeded(slug: string) {
-  const current = getSnapshot();
-  if (current.hidden.includes(slug)) return;
-  write({ ...current, hidden: [...current.hidden, slug] });
-}
-
-export function unhideSeeded(slug: string) {
-  const current = getSnapshot();
-  write({ ...current, hidden: current.hidden.filter((entry) => entry !== slug) });
-}
-
-/**
- * Yours first, always. What you added is what you are working on; the seeded
- * charts are a starting point you have already moved past the moment you add
- * anything of your own.
- */
 export function allSongs(library: Library): Song[] {
-  return [...library.own, ...SEEDED_SONGS.filter((song) => !library.hidden.includes(song.slug))];
-}
-
-/** Including the ones put away, for the page that offers them back. */
-export function allSongsIncludingHidden(library: Library): Song[] {
-  return [...library.own, ...SEEDED_SONGS];
-}
-
-export function isSeeded(slug: string): boolean {
-  return SEEDED_SONGS.some((song) => song.slug === slug);
+  return library.own;
 }
 
 export function findSong(library: Library, slug: string): Song | undefined {
-  return allSongsIncludingHidden(library).find((song) => song.slug === slug);
+  return library.own.find((song) => song.slug === slug);
 }
 
 export function findSet(library: Library, id: string): SetList | undefined {
@@ -249,7 +242,9 @@ export function claimLibrary(userId: string): "adopted" | "resumed" | "switched"
     return "adopted";
   }
 
-  write({ ...EMPTY, ownerId: userId });
+  // The account's own songs come down from the database, starters included, so
+  // nothing is given here: a starter it deleted must stay deleted.
+  write({ ...EMPTY, ownerId: userId, seeded: true });
   return "switched";
 }
 

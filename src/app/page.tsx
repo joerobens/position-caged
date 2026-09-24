@@ -1,6 +1,5 @@
 import Link from "next/link";
 import SiteNav from "@/components/SiteNav";
-import { SEEDED_SONGS } from "@/lib/songs";
 
 export const metadata = {
   title: "Position - learn the neck, then play something on it",
@@ -71,18 +70,6 @@ export default function Home() {
           ))}
         </section>
 
-        <section className="mt-10">
-          <h2 className="label">In the library</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {SEEDED_SONGS.map((song) => (
-              <li key={song.slug}>
-                <Link href={`/songs/${song.slug}`} className="btn">
-                  {song.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
       </main>
     </>
   );

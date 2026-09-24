@@ -12,7 +12,7 @@ import SongShapes from "@/components/SongShapes";
 import Panel from "@/components/Panel";
 import SongsOnThis from "@/components/SongsOnThis";
 import { useSession } from "@/hooks/useSession";
-import { addSong, findSong, hideSeeded, removeSong, setLyrics, slugify } from "@/lib/songStore";
+import { addSong, findSong, removeSong, setLyrics } from "@/lib/songStore";
 import { KEYS } from "@/lib/music";
 import { effectiveCapo, needsRetune, tuningOf } from "@/lib/tunings";
 import { barChords, chartChords, chordName, numberingOf, parseChord, shapeRoot } from "@/lib/nashville";
@@ -46,7 +46,6 @@ export default function SongView({ slug }: { slug: string }) {
   const lyrics = library.lyrics[song.slug] ?? "";
   // A minor chart is numbered from its relative major, so that is what the
   // numbers are counted and spelled against.
-  const mine = library.own.some((entry) => entry.slug === song.slug);
   const numbering = numberingOf(song);
   const spellRoot = (root + (numbering.relative ? 3 : 0)) % 12;
   // With a capo on, the chord you finger is not the chord that sounds. The shapes
@@ -129,40 +128,13 @@ export default function SongView({ slug }: { slug: string }) {
         <Link href={practiceHref} className="btn">
           Practise the changes
         </Link>
-        {mine ? (
-          <button type="button" className="btn" onClick={() => setEditingChart(true)}>
-            Edit the song
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              const copy = slugify(`${song.title} mine`, library);
-              addSong({ ...song, slug: copy, credit: song.credit });
-              router.push(`/songs/${copy}`);
-            }}
-          >
-            Make a copy I can edit
-          </button>
-        )}
+        <button type="button" className="btn" onClick={() => setEditingChart(true)}>
+          Edit the song
+        </button>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {mine ? (
-            <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
-              Delete
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-quiet"
-              onClick={() => {
-                hideSeeded(song.slug);
-                router.push("/songs");
-              }}
-            >
-              Hide from my library
-            </button>
-          )}
+          <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
+            Delete
+          </button>
         </div>
       </div>
 
@@ -188,13 +160,6 @@ export default function SongView({ slug }: { slug: string }) {
             </button>
           </div>
         </div>
-      ) : null}
-
-      {!mine ? (
-        <p className="mt-3 max-w-[70ch] text-[13px] leading-relaxed text-bone-dim">
-          This one ships with the app, so it cannot be edited or deleted. Copy it to make it yours, or hide it to get
-          it out of the list.
-        </p>
       ) : null}
 
       {/* the chart, which is the reminder you actually need on a stand */}

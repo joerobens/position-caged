@@ -15,7 +15,6 @@ const LINKS = [
   { href: "/songs", label: "Songs" },
   { href: "/sets", label: "Sets" },
   { href: "/theory", label: "Theory" },
-  { href: "/classic/index.html", label: "Classic", external: true },
 ];
 
 const THEME_ORDER: ThemePreference[] = ["system", "light", "dark"];
@@ -44,15 +43,11 @@ export default function SiteNav({ sticky = true }: { sticky?: boolean } = {}) {
         </Link>
         <div className="flex h-full items-center gap-4 overflow-x-auto">
           {LINKS.map((link) => {
-            const active = !link.external && pathname.startsWith(link.href);
+            const active = pathname.startsWith(link.href);
             const className = `flex h-full items-center whitespace-nowrap border-b-2 text-sm transition-colors ${
               active ? "border-b-[color:var(--accent)] text-bone" : "border-transparent text-bone-dim hover:text-bone"
             }`;
-            return link.external ? (
-              <a key={link.href} href={link.href} className={className}>
-                {link.label}
-              </a>
-            ) : (
+            return (
               <Link key={link.href} href={link.href} aria-current={active ? "page" : undefined} className={className}>
                 {link.label}
               </Link>
