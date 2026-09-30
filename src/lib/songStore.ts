@@ -227,15 +227,6 @@ export function nextSetId(library: Library): string {
   return `set-${n}`;
 }
 
-/** Move a song one place up or down the running order. */
-export function moveInSet(set: SetList, index: number, delta: number): SetList {
-  const target = index + delta;
-  if (target < 0 || target >= set.slugs.length) return set;
-  const slugs = [...set.slugs];
-  [slugs[index], slugs[target]] = [slugs[target], slugs[index]];
-  return { ...set, slugs };
-}
-
 /** A slug that will not collide with a song already in the library. */
 export function slugify(title: string, library: Library): string {
   const base =
